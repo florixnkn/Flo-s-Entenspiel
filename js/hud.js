@@ -204,52 +204,6 @@ function _drawDoor(ctx, childProgress) {
 }
 
 // ---------------------------------------------------------------------------
-// Toilet prop renderer — called from game.js for each toilet in level.props
-// ---------------------------------------------------------------------------
-function drawToilet(ctx, prop) {
-  var x  = prop.x;
-  var y  = prop.y;
-  var w  = prop.w;
-  var h  = prop.h;
-
-  ctx.save();
-
-  // Tank (upper rectangle)
-  ctx.fillStyle   = "#e8eef2";
-  _hudRoundRect(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
-  ctx.fill();
-  ctx.strokeStyle = "#8899aa";
-  ctx.lineWidth   = 2;
-  _hudRoundRect(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
-  ctx.stroke();
-
-  // Bowl (lower, wider oval-ish rect)
-  ctx.fillStyle = "#d8e8f0";
-  _hudRoundRect(ctx, x, y + h * 0.42, w, h * 0.58, 8);
-  ctx.fill();
-  ctx.strokeStyle = "#8899aa";
-  ctx.lineWidth   = 2;
-  _hudRoundRect(ctx, x, y + h * 0.42, w, h * 0.58, 8);
-  ctx.stroke();
-
-  // Bowl inner (water)
-  ctx.fillStyle   = "#b8d8f0";
-  ctx.globalAlpha = 0.7;
-  _hudRoundRect(ctx, x + 6, y + h * 0.55, w - 12, h * 0.32, 6);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Emoji-style label
-  ctx.fillStyle    = "#445566";
-  ctx.font         = "bold 9px system-ui, sans-serif";
-  ctx.textAlign    = "center";
-  ctx.textBaseline = "top";
-  ctx.fillText("WC", x + w / 2, y + h + 2);
-
-  ctx.restore();
-}
-
-// ---------------------------------------------------------------------------
 // LOSE overlay — child entered (time ran out)
 // ---------------------------------------------------------------------------
 function drawLoseChildOverlay(ctx) {

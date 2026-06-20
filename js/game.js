@@ -1,12 +1,12 @@
 // js/game.js — Main loop, state machine, update, draw orchestration.
-// Slice 4: timer, child-progress, LOSE (time / toilet), WIN guard, restart.
+// Slice 5: props system, Levels 2 & 3, level progression, ALLCLEAR.
 
 (function () {
   var canvas = document.getElementById("game");
   var ctx    = canvas.getContext("2d");
 
   // --- Mutable game state ---
-  // g.state: "PLAY" | "WIN" | "LOSE_CHILD" | "LOSE_TOILET"
+  // g.state: "PLAY" | "WIN_BEAT" | "WIN" | "LOSE_CHILD" | "LOSE_TOILET" | "ALLCLEAR"
   var g = {
     levelIndex:    0,
     level:         null,
@@ -14,9 +14,12 @@
     tub:           null,
     props:         [],
     state:         "PLAY",
-    timeLeft:      0,     // seconds remaining this level
-    childProgress: 0,     // 0..1 (derived each tick)
-    timeBonus:     0      // time left when WIN was achieved (mini-score)
+    timeLeft:      0,
+    childProgress: 0,
+    timeBonus:     0,
+    totalTime:     0,    // running seconds across all states (for animation)
+    winBeatTimer:  0,    // countdown for the "Level geschafft!" beat (WIN_BEAT state)
+    allclearTime:  0     // accumulated play time for ALLCLEAR screen
   };
 
   var duck = createDuck(0, 0);
@@ -25,15 +28,39 @@
   _startLevel(0);
 
   // ---------------------------------------------------------------------------
-  // Level loader (wraps loadLevel, also resets timer + child state)
+  // Level loader — loads level, initialises props, injects faucet/trampoline
+  // props into g.platforms so the standard collision resolver handles them.
   // ---------------------------------------------------------------------------
   function _startLevel(index) {
     loadLevel(index, duck, g);
-    g.props         = (g.level.props || []).slice();
+
+    var rawProps = (g.level.props || []).slice();
+    // Deep-copy props so runtime fields don't bleed between attempts
+    g.props = rawProps.map(function (p) {
+      return Object.assign({}, p, p.params ? { params: Object.assign({}, p.params) } : {});
+    });
+
+    // Initialise runtime state on props
+    propsInit(g.props);
+
+    // Inject faucet and trampoline into the platforms array so resolveAllPlatforms
+    // can handle landing on them. They are the SAME objects, so updating
+    // p.x / p.y in propsUpdate automatically moves the collision rect too.
+    for (var i = 0; i < g.props.length; i++) {
+      var p = g.props[i];
+      if (p.type === "faucet" || p.type === "trampoline") {
+        g.platforms.push(p);
+      }
+    }
+
     g.timeLeft      = g.level.timeLimit;
     g.childProgress = 0;
     g.timeBonus     = 0;
     g.state         = "PLAY";
+    g.winBeatTimer  = 0;
+
+    // Reset duck stun state
+    duck.stunTime = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -66,10 +93,35 @@
   // Update
   // ---------------------------------------------------------------------------
   function update(dt) {
-    // R restarts from ANY non-PLAY state
-    if (g.state !== "PLAY") {
+    g.totalTime += dt;
+
+    // --- ALLCLEAR: R restarts from Level 1 ---
+    if (g.state === "ALLCLEAR") {
+      if (Input.pressed("KeyR")) {
+        g.allclearTime = 0;
+        _startLevel(0);
+      }
+      return;
+    }
+
+    // --- Non-PLAY overlays: R restarts CURRENT level ---
+    if (g.state !== "PLAY" && g.state !== "WIN_BEAT") {
       if (Input.pressed("KeyR")) {
         _startLevel(g.levelIndex);
+      }
+      return;
+    }
+
+    // --- WIN_BEAT: brief "Level geschafft!" pause, then advance ---
+    if (g.state === "WIN_BEAT") {
+      g.winBeatTimer -= dt;
+      if (Input.pressed("KeyR")) {
+        // R during beat skips to next level immediately
+        _advanceLevel();
+        return;
+      }
+      if (g.winBeatTimer <= 0) {
+        _advanceLevel();
       }
       return;
     }
@@ -82,17 +134,22 @@
       return;
     }
 
+    // Tick down duck stun (blocks input in duck.js if stunTime > 0)
+    if (duck.stunTime > 0) {
+      duck.stunTime -= dt;
+      if (duck.stunTime < 0) duck.stunTime = 0;
+    }
+
     duckUpdate(duck, dt, g.platforms);
 
     // Respawn if duck fell off bottom (timer keeps running)
     if (duck.fellOff) {
       duckReset(duck, g.level.start.x, g.level.start.y);
+      duck.stunTime = 0;
       return;
     }
 
-    // --- WIN check first: duck body enters tub rectangle ---
-    // Evaluated BEFORE decrementing the timer so a duck reaching the tub on the
-    // exact final frame wins rather than losing.
+    // --- WIN check: duck body enters tub rectangle ---
     var tub = g.tub;
     if (
       duck.x + duck.radius > tub.x &&
@@ -100,101 +157,95 @@
       duck.y + duck.radius > tub.y &&
       duck.y - duck.radius < tub.y + tub.h
     ) {
-      g.state     = "WIN";
-      g.timeBonus = g.timeLeft;
-      // SFX.splash()  — stub for the juice pass
+      g.timeBonus     = g.timeLeft;
+      g.allclearTime += g.timeBonus;
+      g.state         = "WIN_BEAT";
+      g.winBeatTimer  = 1.8;  // 1.8 s of "Level geschafft!" before next level
       return;
     }
 
-    // --- Toilet zone check (instant LOSE) ---
-    // Only fires when duck is DESCENDING (vy > 0) and horizontally within the bowl,
-    // preventing sideways pass-through false triggers.
-    for (var i = 0; i < g.props.length; i++) {
-      var prop = g.props[i];
-      if (prop.type === "toilet") {
-        if (
-          duck.vy > 0 &&
-          duck.x >= prop.x && duck.x <= prop.x + prop.w &&
-          _duckOverlapsRect(duck, prop)
-        ) {
-          g.state = "LOSE_TOILET";
-          // SFX.plop()  — stub for the juice pass
-          return;
-        }
-      }
+    // --- Props update (trampoline, wind, cat, toilet) ---
+    var propAction = propsUpdate(g.props, duck, dt);
+    if (propAction === "LOSE_TOILET") {
+      g.state = "LOSE_TOILET";
+      return;
     }
 
-    // Count down timer
+    // --- Timer ---
     g.timeLeft -= dt;
     if (g.timeLeft < 0) { g.timeLeft = 0; }
 
-    // Derive child progress
     g.childProgress = 1 - g.timeLeft / g.level.timeLimit;
 
-    // SFX.tick()  — stub: play tick sound each second in the last 5s (juice pass)
-
-    // Time ran out → LOSE (child entered)
     if (g.timeLeft <= 0) {
       g.state = "LOSE_CHILD";
-      // SFX.cry()  — stub for the juice pass
       return;
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Axis-aligned circle vs rect overlap (for prop/toilet detection)
+  // Advance to next level or ALLCLEAR
   // ---------------------------------------------------------------------------
-  function _duckOverlapsRect(duck, rect) {
-    return circleOverlapsRect(
-      duck.x, duck.y, duck.radius,
-      rect.x, rect.y, rect.w, rect.h
-    );
+  function _advanceLevel() {
+    var next = g.levelIndex + 1;
+    if (next < LEVELS.length) {
+      _startLevel(next);
+    } else {
+      g.state = "ALLCLEAR";
+    }
   }
 
   // ---------------------------------------------------------------------------
   // Draw
   // ---------------------------------------------------------------------------
   function draw() {
-    // Background — bathroom-y light blue
     ctx.fillStyle = PAL.sky;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     drawPlatforms(ctx, g.platforms);
     drawTub(ctx, g.tub);
 
-    // Draw toilet props
-    for (var i = 0; i < g.props.length; i++) {
-      if (g.props[i].type === "toilet") {
-        drawToilet(ctx, g.props[i]);
-      }
-    }
+    // Draw all props (toilet, faucet, trampoline, wind, cat, soap)
+    propsDraw(ctx, g.props, g.totalTime);
 
     drawAimIndicator(ctx, duck);
     duckDraw(ctx, duck, g.timeLeft);
     drawPowerMeter(ctx, duck);
 
-    // HUD (clock + bar + door) — always drawn during PLAY and over the scene in LOSE/WIN
+    // HUD always drawn
     drawHUD(ctx, g.timeLeft, g.level ? g.level.timeLimit : 1, g.childProgress);
 
-    if (g.state === "WIN") {
+    // Level name badge
+    _drawLevelBadge(ctx, g.levelIndex, LEVELS.length);
+
+    if (g.state === "WIN_BEAT") {
+      _drawWinBeatOverlay(ctx, g.levelIndex, g.timeBonus, g.winBeatTimer);
+    } else if (g.state === "WIN") {
+      // WIN is only used if we reach it from outside (currently unused but kept as guard)
       drawWinOverlay(ctx, g.timeBonus);
     } else if (g.state === "LOSE_CHILD") {
       drawLoseChildOverlay(ctx);
     } else if (g.state === "LOSE_TOILET") {
       drawLoseToiletOverlay(ctx);
+    } else if (g.state === "ALLCLEAR") {
+      _drawAllclearOverlay(ctx, g.allclearTime, LEVELS.length);
     } else {
       drawHint(ctx);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Platform renderer — cartoon rounded rects with label
+  // Platform renderer — cartoon rounded rects with label.
+  // Soap platforms get an extra shiny blue tint overlay.
   // ---------------------------------------------------------------------------
   function drawPlatforms(ctx, platforms) {
     for (var i = 0; i < platforms.length; i++) {
       var p = platforms[i];
-      var isFloor = (p.label === "");
 
+      // Skip prop-platforms (faucet/trampoline) — propsDraw handles those
+      if (p.type === "faucet" || p.type === "trampoline") continue;
+
+      var isFloor = (p.label === "");
       ctx.save();
 
       if (isFloor) {
@@ -205,21 +256,33 @@
         ctx.lineWidth   = 1.5;
         ctx.stroke();
       } else {
-        ctx.fillStyle = "#c8a878";
+        var isSoap = (p.surface === "soap");
+
+        ctx.fillStyle = isSoap ? "#99ccee" : "#c8a878";
         _roundRect(ctx, p.x, p.y, p.w, p.h, 6);
         ctx.fill();
 
-        ctx.fillStyle = "#dbbe94";
+        // Top stripe
+        ctx.fillStyle = isSoap ? "#bbddff" : "#dbbe94";
         _roundRect(ctx, p.x, p.y, p.w, 6, 4);
         ctx.fill();
 
-        ctx.strokeStyle = PAL.outline;
+        if (isSoap) {
+          // Shiny specular streak
+          ctx.fillStyle   = "#ffffff";
+          ctx.globalAlpha = 0.5;
+          _roundRect(ctx, p.x + 4, p.y + 2, p.w - 8, 4, 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        ctx.strokeStyle = isSoap ? "#3366cc" : PAL.outline;
         ctx.lineWidth   = 2.5;
         _roundRect(ctx, p.x, p.y, p.w, p.h, 6);
         ctx.stroke();
 
         if (p.label) {
-          ctx.fillStyle    = PAL.outline;
+          ctx.fillStyle    = isSoap ? "#003388" : PAL.outline;
           ctx.font         = "bold 10px system-ui, sans-serif";
           ctx.textAlign    = "center";
           ctx.textBaseline = "middle";
@@ -236,12 +299,7 @@
   // ---------------------------------------------------------------------------
   function drawTub(ctx, tub) {
     if (!tub) return;
-
-    var tx = tub.x;
-    var ty = tub.y;
-    var tw = tub.w;
-    var th = tub.h;
-
+    var tx = tub.x, ty = tub.y, tw = tub.w, th = tub.h;
     ctx.save();
 
     ctx.fillStyle = "#b8e8f8";
@@ -257,9 +315,9 @@
     _roundRect(ctx, tx, ty, tw, th, 12);
     ctx.stroke();
 
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth   = 2;
-    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle  = "#ffffff";
+    ctx.lineWidth    = 2;
+    ctx.globalAlpha  = 0.55;
     ctx.beginPath();
     ctx.moveTo(tx + 14, ty + 4);
     ctx.lineTo(tx + tw - 14, ty + 4);
@@ -276,17 +334,17 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Win overlay — shows time bonus
+  // WIN overlay — kept for compatibility (currently unused in normal flow)
   // ---------------------------------------------------------------------------
   function drawWinOverlay(ctx, timeBonus) {
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    var bw = 440;
-    var bh = 180;
+    var bw = 440, bh = 180;
     var bx = (CANVAS_W - bw) / 2;
     var by = (CANVAS_H - bh) / 2;
+
     ctx.fillStyle = "#fffae8";
     _roundRect(ctx, bx, by, bw, bh, 18);
     ctx.fill();
@@ -301,7 +359,6 @@
     ctx.textBaseline = "middle";
     ctx.fillText("GESCHAFFT! 🦆🛁", CANVAS_W / 2, by + 62);
 
-    // Show remaining time as mini-score
     var bonusSecs = Math.ceil(Math.max(0, timeBonus));
     ctx.fillStyle = "#886600";
     ctx.font      = "16px system-ui, sans-serif";
@@ -310,6 +367,92 @@
     ctx.fillStyle = PAL.hintText;
     ctx.font      = "17px system-ui, sans-serif";
     ctx.fillText("R = nochmal", CANVAS_W / 2, by + 148);
+
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------------------
+  // WIN_BEAT overlay — "Level geschafft!" transitional banner
+  // ---------------------------------------------------------------------------
+  function _drawWinBeatOverlay(ctx, levelIndex, timeBonus, timer) {
+    // Semi-transparent green wash
+    ctx.save();
+    var alpha = Math.min(0.7, (1.8 - timer) * 0.7);
+    ctx.fillStyle = "rgba(20,100,30," + alpha + ")";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    var bw = 480, bh = 160;
+    var bx = (CANVAS_W - bw) / 2;
+    var by = (CANVAS_H - bh) / 2;
+
+    ctx.fillStyle = "#eefff0";
+    _roundRect(ctx, bx, by, bw, bh, 18);
+    ctx.fill();
+    ctx.strokeStyle = "#228833";
+    ctx.lineWidth   = 4;
+    _roundRect(ctx, bx, by, bw, bh, 18);
+    ctx.stroke();
+
+    ctx.fillStyle    = "#115522";
+    ctx.font         = "bold 36px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Level " + (levelIndex + 1) + " geschafft! 👏", CANVAS_W / 2, by + 58);
+
+    var bonusSecs = Math.ceil(Math.max(0, timeBonus));
+    ctx.fillStyle = "#336600";
+    ctx.font      = "16px system-ui, sans-serif";
+    ctx.fillText("+ " + bonusSecs + " s übrig", CANVAS_W / 2, by + 98);
+
+    var nextIdx = levelIndex + 1;
+    var nextText = (nextIdx < LEVELS.length)
+      ? "Weiter zu Level " + (nextIdx + 1) + " →"
+      : "Alle Level geschafft!";
+    ctx.fillStyle = PAL.hintText;
+    ctx.font      = "15px system-ui, sans-serif";
+    ctx.fillText(nextText, CANVAS_W / 2, by + 132);
+
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------------------
+  // ALLCLEAR end screen
+  // ---------------------------------------------------------------------------
+  function _drawAllclearOverlay(ctx, totalBonusTime, levelCount) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,50,0.7)";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    var bw = 540, bh = 260;
+    var bx = (CANVAS_W - bw) / 2;
+    var by = (CANVAS_H - bh) / 2;
+
+    ctx.fillStyle = "#fffde8";
+    _roundRect(ctx, bx, by, bw, bh, 22);
+    ctx.fill();
+    ctx.strokeStyle = "#aa8800";
+    ctx.lineWidth   = 5;
+    _roundRect(ctx, bx, by, bw, bh, 22);
+    ctx.stroke();
+
+    ctx.fillStyle    = "#aa6600";
+    ctx.font         = "bold 44px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Alle Level geschafft! 🦆🛁", CANVAS_W / 2, by + 68);
+
+    ctx.fillStyle = "#553300";
+    ctx.font      = "18px system-ui, sans-serif";
+    ctx.fillText(levelCount + " Level sauber gemeistert 🌟", CANVAS_W / 2, by + 118);
+
+    var bonusSecs = Math.ceil(Math.max(0, totalBonusTime));
+    ctx.fillStyle = "#886600";
+    ctx.font      = "16px system-ui, sans-serif";
+    ctx.fillText("Gesamt-Bonus: " + bonusSecs + " s übrig", CANVAS_W / 2, by + 155);
+
+    ctx.fillStyle = "#334455";
+    ctx.font      = "bold 17px system-ui, sans-serif";
+    ctx.fillText("R = von vorn", CANVAS_W / 2, by + 210);
 
     ctx.restore();
   }
@@ -324,8 +467,7 @@
     var arrowLen = 36 + duck.power * 22;
     var dx = Math.cos(angleRad) * arrowLen * duck.facing;
     var dy = -Math.sin(angleRad) * arrowLen;
-    var ox = duck.x;
-    var oy = duck.y;
+    var ox = duck.x, oy = duck.y;
 
     ctx.save();
     ctx.globalAlpha  = duck.charging ? 0.55 + duck.power * 0.4 : 0.35;
@@ -343,14 +485,8 @@
     var headAngle = Math.atan2(dy, dx);
     ctx.beginPath();
     ctx.moveTo(ox + dx, oy + dy);
-    ctx.lineTo(
-      ox + dx - headLen * Math.cos(headAngle - 0.42),
-      oy + dy - headLen * Math.sin(headAngle - 0.42)
-    );
-    ctx.lineTo(
-      ox + dx - headLen * Math.cos(headAngle + 0.42),
-      oy + dy - headLen * Math.sin(headAngle + 0.42)
-    );
+    ctx.lineTo(ox + dx - headLen * Math.cos(headAngle - 0.42), oy + dy - headLen * Math.sin(headAngle - 0.42));
+    ctx.lineTo(ox + dx - headLen * Math.cos(headAngle + 0.42), oy + dy - headLen * Math.sin(headAngle + 0.42));
     ctx.closePath();
     ctx.fill();
 
@@ -363,8 +499,7 @@
   function drawPowerMeter(ctx, duck) {
     if (!duck.onGround && !duck.charging) return;
 
-    var mw = 120;
-    var mh = 14;
+    var mw = 120, mh = 14;
     var mx = duck.x - mw / 2;
     var my = duck.y - duck.radius - 26;
 
@@ -388,6 +523,24 @@
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("POWER", duck.x, my + mh / 2);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Level badge — small top-left indicator of current level
+  // ---------------------------------------------------------------------------
+  function _drawLevelBadge(ctx, levelIndex, totalLevels) {
+    var lvl = LEVELS[levelIndex];
+    if (!lvl) return;
+    ctx.save();
+    ctx.fillStyle    = "rgba(20,20,40,0.55)";
+    _roundRect(ctx, 8, 6, 140, 32, 6);
+    ctx.fill();
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = "bold 11px system-ui, sans-serif";
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("L" + (levelIndex + 1) + "/" + totalLevels + "  " + lvl.name, 16, 12);
+    ctx.restore();
   }
 
   // ---------------------------------------------------------------------------

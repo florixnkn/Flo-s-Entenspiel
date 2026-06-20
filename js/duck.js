@@ -26,6 +26,9 @@ function createDuck(startX, startY) {
 
     // Set by collision resolver; read and cleared in update
     triggerLand: false,
+
+    // Cat stun — set by props.js; duckUpdate blocks input while > 0
+    stunTime: 0,
   };
 }
 
@@ -46,6 +49,7 @@ function duckReset(duck, startX, startY) {
   duck.animT    = 0;
   duck.triggerLand = false;
   duck.fellOff  = false;
+  duck.stunTime = 0;
 }
 
 function duckUpdate(duck, dt, platforms) {
@@ -57,11 +61,15 @@ function duckUpdate(duck, dt, platforms) {
 
   // --- Input: facing direction (only while NOT airborne, for clarity;
   //     SPEC allows direction change always) ---
-  if (Input.held("ArrowLeft"))  duck.facing = -1;
-  if (Input.held("ArrowRight")) duck.facing =  1;
+  // Direction input is blocked during cat stun
+  var isStunned = (duck.stunTime > 0);
+  if (!isStunned) {
+    if (Input.held("ArrowLeft"))  duck.facing = -1;
+    if (Input.held("ArrowRight")) duck.facing =  1;
+  }
 
-  // --- Charge / Launch ---
-  if (duck.onGround && !duck.charging && Input.held("Space")) {
+  // --- Charge / Launch --- (blocked while stunned)
+  if (!isStunned && duck.onGround && !duck.charging && Input.held("Space")) {
     duck.charging = true;
     duck.chargeT  = 0;
     duck.animState = "charging";
