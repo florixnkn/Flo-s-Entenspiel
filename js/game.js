@@ -1,5 +1,5 @@
 // js/game.js — Main loop, state machine, update, draw orchestration.
-// Slice 5: props system, Levels 2 & 3, level progression, ALLCLEAR.
+// Slice 6: Juice + ZzFX wired in.
 
 (function () {
   var canvas = document.getElementById("game");
@@ -19,7 +19,10 @@
     timeBonus:     0,
     totalTime:     0,    // running seconds across all states (for animation)
     winBeatTimer:  0,    // countdown for the "Level geschafft!" beat (WIN_BEAT state)
-    allclearTime:  0     // accumulated play time for ALLCLEAR screen
+    allclearTime:  0,    // accumulated play time for ALLCLEAR screen
+    // Juice helpers
+    _prevState:    "PLAY",   // detect state transitions for one-shot SFX
+    _lastTickSec:  -1        // last integer second we sounded a tick at
   };
 
   var duck = createDuck(0, 0);
@@ -58,6 +61,11 @@
     g.timeBonus     = 0;
     g.state         = "PLAY";
     g.winBeatTimer  = 0;
+    g._prevState    = "PLAY";
+    g._lastTickSec  = -1;
+
+    // Reset juice so particles/shake/slow-mo don't bleed across levels/retries
+    Juice.reset();
 
     // Reset duck stun state
     duck.stunTime = 0;
@@ -95,8 +103,16 @@
   function update(dt) {
     g.totalTime += dt;
 
+    // Juice system update (particles, shake, slow-mo decay) — always runs
+    Juice.update(dt);
+
     // --- ALLCLEAR: R restarts from Level 1 ---
     if (g.state === "ALLCLEAR") {
+      // One-shot ALLCLEAR jingle on state entry
+      if (g._prevState !== "ALLCLEAR") {
+        SFX.allclear();
+        g._prevState = "ALLCLEAR";
+      }
       if (Input.pressed("KeyR")) {
         g.allclearTime = 0;
         _startLevel(0);
@@ -106,6 +122,12 @@
 
     // --- Non-PLAY overlays: R restarts CURRENT level ---
     if (g.state !== "PLAY" && g.state !== "WIN_BEAT") {
+      // One-shot SFX on state entry
+      if (g._prevState !== g.state) {
+        if (g.state === "LOSE_CHILD")  { SFX.cry();  }
+        if (g.state === "LOSE_TOILET") { SFX.plop(); }
+        g._prevState = g.state;
+      }
       if (Input.pressed("KeyR")) {
         _startLevel(g.levelIndex);
       }
@@ -114,6 +136,13 @@
 
     // --- WIN_BEAT: brief "Level geschafft!" pause, then advance ---
     if (g.state === "WIN_BEAT") {
+      // One-shot win SFX on entry
+      if (g._prevState !== "WIN_BEAT") {
+        SFX.win();
+        Juice.splashBurst(g.tub.x + g.tub.w / 2, g.tub.y + g.tub.h / 2);
+        Juice.shake(JUICE_SHAKE_SPLASH_MAG, JUICE_SHAKE_SPLASH_DUR);
+        g._prevState = "WIN_BEAT";
+      }
       g.winBeatTimer -= dt;
       if (Input.pressed("KeyR")) {
         // R during beat skips to next level immediately
@@ -127,6 +156,8 @@
     }
 
     // --- PLAY state ---
+
+    if (g._prevState !== "PLAY") { g._prevState = "PLAY"; }
 
     // R restarts current level
     if (Input.pressed("KeyR")) {
@@ -161,6 +192,11 @@
       g.allclearTime += g.timeBonus;
       g.state         = "WIN_BEAT";
       g.winBeatTimer  = 1.8;  // 1.8 s of "Level geschafft!" before next level
+      // Slow-mo on tub entry — satisfying climax before WIN_BEAT
+      // NOTE: slow-mo only affects visual/particle pacing via Juice.getDt();
+      //       the win result and timer use real dt and are already committed above.
+      Juice.slowMo(JUICE_SLOWMO_FACTOR, JUICE_SLOWMO_DUR);
+      SFX.splash();
       return;
     }
 
@@ -176,6 +212,19 @@
     if (g.timeLeft < 0) { g.timeLeft = 0; }
 
     g.childProgress = 1 - g.timeLeft / g.level.timeLimit;
+
+    // --- Clock tick SFX + pulse (last 5 seconds, once per integer second) ---
+    if (g.timeLeft > 0 && g.timeLeft <= 5) {
+      var currentSec = Math.ceil(g.timeLeft);
+      if (currentSec !== g._lastTickSec) {
+        g._lastTickSec = currentSec;
+        SFX.tick();
+        Juice.triggerClockPulse();
+      }
+    }
+
+    // --- Footstep crescendo (child approaching) ---
+    Juice.updateFootstep(g.childProgress, dt);
 
     if (g.timeLeft <= 0) {
       g.state = "LOSE_CHILD";
@@ -199,8 +248,13 @@
   // Draw
   // ---------------------------------------------------------------------------
   function draw() {
+    // Clear full canvas first (outside shake transform so background doesn't jitter)
     ctx.fillStyle = PAL.sky;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // --- Screenshake: apply translate before drawing world, restore after ---
+    ctx.save();
+    Juice.applyShake(ctx);
 
     drawPlatforms(ctx, g.platforms);
     drawTub(ctx, g.tub);
@@ -212,7 +266,13 @@
     duckDraw(ctx, duck, g.timeLeft);
     drawPowerMeter(ctx, duck);
 
-    // HUD always drawn
+    // Particles drawn inside shake transform so they move with the world
+    Juice.drawParticles(ctx);
+
+    ctx.restore();
+    // --- End screenshake region ---
+
+    // HUD always drawn outside shake (stays stable on screen)
     drawHUD(ctx, g.timeLeft, g.level ? g.level.timeLimit : 1, g.childProgress);
 
     // Level name badge

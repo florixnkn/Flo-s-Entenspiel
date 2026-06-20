@@ -139,6 +139,9 @@ function _duckLaunch(duck) {
   // Stretch in launch direction
   duck.scaleX = 1 / STRETCH_LAUNCH;  // narrow in perpendicular
   duck.scaleY = STRETCH_LAUNCH;       // ... but we rotate scale to velocity dir in draw
+
+  // Juice: rubber duck squeak SFX on every jump
+  SFX.squeak();
 }
 
 function _duckLand(duck) {
@@ -146,6 +149,11 @@ function _duckLand(duck) {
   duck.animT    = LAND_SQUASH_DUR;
   duck.scaleX   = 1 + 0.25;   // squash wide on impact
   duck.scaleY   = 0.65;
+
+  // Juice: land SFX + dust puff + screenshake
+  SFX.land();
+  Juice.landDust(duck.x, duck.y + duck.radius);
+  Juice.shake(JUICE_SHAKE_LAND_MAG, JUICE_SHAKE_LAND_DUR);
 }
 
 function _duckAnimUpdate(duck, dt) {

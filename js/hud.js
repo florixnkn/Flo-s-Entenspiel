@@ -15,6 +15,7 @@ function drawHUD(ctx, timeLeft, timeLimit, childProgress) {
 
 // ---------------------------------------------------------------------------
 // Clock — top-center, shows remaining seconds, turns red below 5 s
+// Juice: pulses in scale each second during last 5s via Juice.clockPulse.
 // ---------------------------------------------------------------------------
 function _drawClock(ctx, timeLeft) {
   var cx = CANVAS_W / 2;
@@ -25,7 +26,17 @@ function _drawClock(ctx, timeLeft) {
   var faceCol  = isUrgent ? "#ff2222" : "#ffffff";
   var rimCol   = isUrgent ? "#cc0000" : "#334455";
 
+  // Scale pop driven by Juice.clockPulse (0 when idle, 1 at peak)
+  var pulse     = (typeof Juice !== "undefined") ? Juice.clockPulse : 0;
+  var clockScale = 1 + pulse * 0.18;  // max 1.18x size at tick moment
+
   ctx.save();
+
+  if (isUrgent && clockScale !== 1) {
+    ctx.translate(cx, cy);
+    ctx.scale(clockScale, clockScale);
+    ctx.translate(-cx, -cy);
+  }
 
   // Clock face
   ctx.beginPath();
@@ -207,8 +218,7 @@ function _drawDoor(ctx, childProgress) {
 // LOSE overlay — child entered (time ran out)
 // ---------------------------------------------------------------------------
 function drawLoseChildOverlay(ctx) {
-  // SFX.cry()  — stub for the juice pass
-
+  // SFX.cry() is triggered once in game.js when the state first enters LOSE_CHILD.
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -248,8 +258,7 @@ function drawLoseChildOverlay(ctx) {
 // LOSE overlay — toilet fall
 // ---------------------------------------------------------------------------
 function drawLoseToiletOverlay(ctx) {
-  // SFX.plop()  — stub for the juice pass
-
+  // SFX.plop() is triggered once in game.js when the state first enters LOSE_TOILET.
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);

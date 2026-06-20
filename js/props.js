@@ -128,8 +128,15 @@ function _updateProp(p, duck, dt) {
         duck.charging = false;
         duck.animState = "flying";
         duck.animT     = STRETCH_DURATION;
-        duck.scaleX    = 1 / STRETCH_LAUNCH;
-        duck.scaleY    = STRETCH_LAUNCH;
+        // Trampoline wind-up squish: compress vertically just before the launch pops it
+        duck.scaleX    = 1.40;   // wider squash on hit
+        duck.scaleY    = 0.55;   // strong vertical squash — SPEC "powerful climax"
+        // The stretch back is handled by _duckAnimUpdate as normal flying state
+
+        // Juice: boing SFX + energy burst + screenshake
+        SFX.boing();
+        Juice.trampolineBurst(duck.x, duck.y + duck.radius);
+        Juice.shake(JUICE_SHAKE_BOING_MAG, JUICE_SHAKE_BOING_DUR);
       }
     }
     return null;
@@ -187,6 +194,11 @@ function _updateProp(p, duck, dt) {
         duck.vy = (dy / dist) * 600 - 300; // extra upward kick
         duck.stunTime = CAT_STUN_DUR;
         duck.onGround = false;
+
+        // Juice: cat-hit SFX + puff + screenshake
+        SFX.catHit();
+        Juice.catPuff(duck.x, duck.y);
+        Juice.shake(JUICE_SHAKE_CAT_MAG, JUICE_SHAKE_CAT_DUR);
       }
     }
     return null;
