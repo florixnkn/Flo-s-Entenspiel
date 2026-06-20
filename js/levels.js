@@ -30,8 +30,8 @@ var LEVELS = [
   // -----------------------------------------------------------------------
   {
     name:       "Der Schrank",
-    timeLimit:  25,          // seconds (not used until Step 4 timer)
-    childSpeed: 1.0,         // not used yet
+    timeLimit:  20,          // seconds — 20 s is generous for a tutorial run
+    childSpeed: 1.0,
 
     // Duck starts on top of the cabinet (platform[0])
     // platform[0]: x=60, y=50, w=130, h=30 → duck.y = 50 - DUCK_RADIUS (22) = 28
@@ -59,7 +59,12 @@ var LEVELS = [
       { x: 680, y: 550, w: CANVAS_W - 680, h: 50, surface: "normal", label: "" }
     ],
 
-    props: []  // props arrive in Level 2
+    // Toilet — placed between P1 (Regal) and P2 (Heizkörper), slightly left of
+    // the main route. Reachable with a weak leftward shot off the Regal but not
+    // on the straight falling path. The general prop system will pick this up later.
+    props: [
+      { type: "toilet", x: 330, y: 295, w: 50, h: 40 }
+    ]
   }
 
   // Level 2 and 3 go here as additional array entries.

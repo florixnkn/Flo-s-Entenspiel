@@ -45,6 +45,7 @@ function duckReset(duck, startX, startY) {
   duck.animState = "idle";
   duck.animT    = 0;
   duck.triggerLand = false;
+  duck.fellOff  = false;
 }
 
 function duckUpdate(duck, dt, platforms) {
@@ -173,7 +174,8 @@ function _duckAnimUpdate(duck, dt) {
 
 // ---------- Drawing ----------
 
-function duckDraw(ctx, duck) {
+// timeLeft is optional — when < 5 the duck's eyes widen to mirror clock urgency.
+function duckDraw(ctx, duck, timeLeft) {
   ctx.save();
   ctx.translate(duck.x, duck.y);
 
@@ -232,11 +234,13 @@ function duckDraw(ctx, duck) {
   ctx.lineWidth   = 1.8;
   ctx.stroke();
 
-  // --- Eye white ---
+  // --- Eye white — dilates when timeLeft < 5 to mirror clock urgency ---
+  var isScared   = (typeof timeLeft === "number") && timeLeft < 5;
+  var eyeScale   = isScared ? 1.45 : 1.0;   // 45 % bigger white + pupil at low time
   var ex = hx + hr * 0.25;
   var ey = hy - hr * 0.2;
   ctx.beginPath();
-  ctx.arc(ex, ey, hr * 0.32, 0, Math.PI * 2);
+  ctx.arc(ex, ey, hr * 0.32 * eyeScale, 0, Math.PI * 2);
   ctx.fillStyle = PAL.duckEyeW;
   ctx.fill();
   ctx.strokeStyle = PAL.outline;
@@ -245,13 +249,13 @@ function duckDraw(ctx, duck) {
 
   // --- Pupil ---
   ctx.beginPath();
-  ctx.arc(ex + hr * 0.08, ey + hr * 0.04, hr * 0.16, 0, Math.PI * 2);
+  ctx.arc(ex + hr * 0.08, ey + hr * 0.04, hr * 0.16 * eyeScale, 0, Math.PI * 2);
   ctx.fillStyle = PAL.duckEye;
   ctx.fill();
 
   // --- Eye shine ---
   ctx.beginPath();
-  ctx.arc(ex + hr * 0.02, ey - hr * 0.06, hr * 0.07, 0, Math.PI * 2);
+  ctx.arc(ex + hr * 0.02, ey - hr * 0.06, hr * 0.07 * eyeScale, 0, Math.PI * 2);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
 

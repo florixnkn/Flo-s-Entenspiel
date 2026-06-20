@@ -1,26 +1,44 @@
 // js/game.js — Main loop, state machine, update, draw orchestration.
-// Slice 3: Level 1, multi-platform collision, bathtub win, respawn.
+// Slice 4: timer, child-progress, LOSE (time / toilet), WIN guard, restart.
 
 (function () {
   var canvas = document.getElementById("game");
   var ctx    = canvas.getContext("2d");
 
-  // --- Mutable game state passed around ---
-  // g is initialised by loadLevel() then read/written each tick.
+  // --- Mutable game state ---
+  // g.state: "PLAY" | "WIN" | "LOSE_CHILD" | "LOSE_TOILET"
   var g = {
-    levelIndex: 0,
-    level:      null,
-    platforms:  [],
-    tub:        null,
-    state:      "PLAY"  // "PLAY" | "WIN"
+    levelIndex:    0,
+    level:         null,
+    platforms:     [],
+    tub:           null,
+    props:         [],
+    state:         "PLAY",
+    timeLeft:      0,     // seconds remaining this level
+    childProgress: 0,     // 0..1 (derived each tick)
+    timeBonus:     0      // time left when WIN was achieved (mini-score)
   };
 
-  var duck = createDuck(0, 0);  // real position set by loadLevel below
+  var duck = createDuck(0, 0);
 
   // Boot straight into Level 1
-  loadLevel(0, duck, g);
+  _startLevel(0);
 
-  // --- Fixed-timestep loop ---
+  // ---------------------------------------------------------------------------
+  // Level loader (wraps loadLevel, also resets timer + child state)
+  // ---------------------------------------------------------------------------
+  function _startLevel(index) {
+    loadLevel(index, duck, g);
+    g.props         = (g.level.props || []).slice();
+    g.timeLeft      = g.level.timeLimit;
+    g.childProgress = 0;
+    g.timeBonus     = 0;
+    g.state         = "PLAY";
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fixed-timestep loop
+  // ---------------------------------------------------------------------------
   var FIXED_DT    = 1 / 60;
   var MAX_ACCUM   = 0.200;
   var lastTime    = null;
@@ -48,32 +66,33 @@
   // Update
   // ---------------------------------------------------------------------------
   function update(dt) {
-    if (g.state === "WIN") {
-      // R restarts Level 1 from win screen
+    // R restarts from ANY non-PLAY state
+    if (g.state !== "PLAY") {
       if (Input.pressed("KeyR")) {
-        g.state = "PLAY";
-        loadLevel(g.levelIndex, duck, g);
+        _startLevel(g.levelIndex);
       }
       return;
     }
 
     // --- PLAY state ---
 
-    // R always restarts current level during play
+    // R restarts current level
     if (Input.pressed("KeyR")) {
-      loadLevel(g.levelIndex, duck, g);
+      _startLevel(g.levelIndex);
       return;
     }
 
     duckUpdate(duck, dt, g.platforms);
 
-    // Respawn if duck fell below canvas (flag set at top of duckUpdate, runs every tick)
+    // Respawn if duck fell off bottom (timer keeps running)
     if (duck.fellOff) {
       duckReset(duck, g.level.start.x, g.level.start.y);
       return;
     }
 
-    // Win check: duck body centre enters tub rectangle
+    // --- WIN check first: duck body enters tub rectangle ---
+    // Evaluated BEFORE decrementing the timer so a duck reaching the tub on the
+    // exact final frame wins rather than losing.
     var tub = g.tub;
     if (
       duck.x + duck.radius > tub.x &&
@@ -81,8 +100,55 @@
       duck.y + duck.radius > tub.y &&
       duck.y - duck.radius < tub.y + tub.h
     ) {
-      g.state = "WIN";
+      g.state     = "WIN";
+      g.timeBonus = g.timeLeft;
+      // SFX.splash()  — stub for the juice pass
+      return;
     }
+
+    // --- Toilet zone check (instant LOSE) ---
+    // Only fires when duck is DESCENDING (vy > 0) and horizontally within the bowl,
+    // preventing sideways pass-through false triggers.
+    for (var i = 0; i < g.props.length; i++) {
+      var prop = g.props[i];
+      if (prop.type === "toilet") {
+        if (
+          duck.vy > 0 &&
+          duck.x >= prop.x && duck.x <= prop.x + prop.w &&
+          _duckOverlapsRect(duck, prop)
+        ) {
+          g.state = "LOSE_TOILET";
+          // SFX.plop()  — stub for the juice pass
+          return;
+        }
+      }
+    }
+
+    // Count down timer
+    g.timeLeft -= dt;
+    if (g.timeLeft < 0) { g.timeLeft = 0; }
+
+    // Derive child progress
+    g.childProgress = 1 - g.timeLeft / g.level.timeLimit;
+
+    // SFX.tick()  — stub: play tick sound each second in the last 5s (juice pass)
+
+    // Time ran out → LOSE (child entered)
+    if (g.timeLeft <= 0) {
+      g.state = "LOSE_CHILD";
+      // SFX.cry()  — stub for the juice pass
+      return;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Axis-aligned circle vs rect overlap (for prop/toilet detection)
+  // ---------------------------------------------------------------------------
+  function _duckOverlapsRect(duck, rect) {
+    return circleOverlapsRect(
+      duck.x, duck.y, duck.radius,
+      rect.x, rect.y, rect.w, rect.h
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -95,12 +161,27 @@
 
     drawPlatforms(ctx, g.platforms);
     drawTub(ctx, g.tub);
+
+    // Draw toilet props
+    for (var i = 0; i < g.props.length; i++) {
+      if (g.props[i].type === "toilet") {
+        drawToilet(ctx, g.props[i]);
+      }
+    }
+
     drawAimIndicator(ctx, duck);
-    duckDraw(ctx, duck);
+    duckDraw(ctx, duck, g.timeLeft);
     drawPowerMeter(ctx, duck);
 
+    // HUD (clock + bar + door) — always drawn during PLAY and over the scene in LOSE/WIN
+    drawHUD(ctx, g.timeLeft, g.level ? g.level.timeLimit : 1, g.childProgress);
+
     if (g.state === "WIN") {
-      drawWinOverlay(ctx);
+      drawWinOverlay(ctx, g.timeBonus);
+    } else if (g.state === "LOSE_CHILD") {
+      drawLoseChildOverlay(ctx);
+    } else if (g.state === "LOSE_TOILET") {
+      drawLoseToiletOverlay(ctx);
     } else {
       drawHint(ctx);
     }
@@ -117,7 +198,6 @@
       ctx.save();
 
       if (isFloor) {
-        // Subtle floor strip
         ctx.fillStyle   = PAL.ground;
         _roundRect(ctx, p.x, p.y, p.w, p.h, 4);
         ctx.fill();
@@ -125,12 +205,10 @@
         ctx.lineWidth   = 1.5;
         ctx.stroke();
       } else {
-        // Named platform — warm brown fill, cartoon outline
         ctx.fillStyle = "#c8a878";
         _roundRect(ctx, p.x, p.y, p.w, p.h, 6);
         ctx.fill();
 
-        // Top stripe (lighter)
         ctx.fillStyle = "#dbbe94";
         _roundRect(ctx, p.x, p.y, p.w, 6, 4);
         ctx.fill();
@@ -140,7 +218,6 @@
         _roundRect(ctx, p.x, p.y, p.w, p.h, 6);
         ctx.stroke();
 
-        // Label text
         if (p.label) {
           ctx.fillStyle    = PAL.outline;
           ctx.font         = "bold 10px system-ui, sans-serif";
@@ -155,7 +232,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Tub renderer — light-blue cartoon bathtub shape
+  // Tub renderer
   // ---------------------------------------------------------------------------
   function drawTub(ctx, tub) {
     if (!tub) return;
@@ -167,23 +244,19 @@
 
     ctx.save();
 
-    // Tub body fill
     ctx.fillStyle = "#b8e8f8";
     _roundRect(ctx, tx, ty, tw, th, 12);
     ctx.fill();
 
-    // Water shimmer (slightly lighter band)
     ctx.fillStyle = "#d4f0fc";
     _roundRect(ctx, tx + 6, ty + 6, tw - 12, th * 0.45, 6);
     ctx.fill();
 
-    // Tub rim / outline
     ctx.strokeStyle = PAL.outline;
     ctx.lineWidth   = 3;
     _roundRect(ctx, tx, ty, tw, th, 12);
     ctx.stroke();
 
-    // Rim highlight on top
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth   = 2;
     ctx.globalAlpha = 0.55;
@@ -193,7 +266,6 @@
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // Label
     ctx.fillStyle    = "#1155aa";
     ctx.font         = "bold 12px system-ui, sans-serif";
     ctx.textAlign    = "center";
@@ -204,17 +276,15 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Win overlay
+  // Win overlay — shows time bonus
   // ---------------------------------------------------------------------------
-  function drawWinOverlay(ctx) {
-    // Dim
+  function drawWinOverlay(ctx, timeBonus) {
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Box
-    var bw = 420;
-    var bh = 160;
+    var bw = 440;
+    var bh = 180;
     var bx = (CANVAS_W - bw) / 2;
     var by = (CANVAS_H - bh) / 2;
     ctx.fillStyle = "#fffae8";
@@ -225,23 +295,27 @@
     _roundRect(ctx, bx, by, bw, bh, 18);
     ctx.stroke();
 
-    // Big text
     ctx.fillStyle    = "#226611";
     ctx.font         = "bold 42px system-ui, sans-serif";
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("GESCHAFFT! 🦆🛁", CANVAS_W / 2, by + 62);
 
-    // Sub text
+    // Show remaining time as mini-score
+    var bonusSecs = Math.ceil(Math.max(0, timeBonus));
+    ctx.fillStyle = "#886600";
+    ctx.font      = "16px system-ui, sans-serif";
+    ctx.fillText("+ " + bonusSecs + " s übrig", CANVAS_W / 2, by + 108);
+
     ctx.fillStyle = PAL.hintText;
-    ctx.font      = "18px system-ui, sans-serif";
-    ctx.fillText("R = nochmal", CANVAS_W / 2, by + 112);
+    ctx.font      = "17px system-ui, sans-serif";
+    ctx.fillText("R = nochmal", CANVAS_W / 2, by + 148);
 
     ctx.restore();
   }
 
   // ---------------------------------------------------------------------------
-  // Aim indicator (carried over from Slice 1)
+  // Aim indicator
   // ---------------------------------------------------------------------------
   function drawAimIndicator(ctx, duck) {
     if (!duck.onGround && !duck.charging) return;
@@ -284,7 +358,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Power meter (carried over from Slice 1)
+  // Power meter
   // ---------------------------------------------------------------------------
   function drawPowerMeter(ctx, duck) {
     if (!duck.onGround && !duck.charging) return;
@@ -302,7 +376,7 @@
     ctx.stroke();
 
     if (duck.power > 0) {
-      var r = Math.round(255 * Math.min(1, duck.power * 2));
+      var r  = Math.round(255 * Math.min(1, duck.power * 2));
       var gv = Math.round(255 * Math.min(1, (1 - duck.power) * 2));
       ctx.fillStyle = "rgb(" + r + "," + gv + ",30)";
       _roundRect(ctx, mx + 1, my + 1, (mw - 2) * duck.power, mh - 2, 3);
