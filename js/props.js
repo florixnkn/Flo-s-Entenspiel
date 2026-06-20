@@ -233,26 +233,26 @@ function _drawPropToilet(ctx, p) {
 
   // Tank
   ctx.fillStyle   = "#e8eef2";
-  _propsRR(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
+  rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
   ctx.fill();
   ctx.strokeStyle = "#8899aa";
   ctx.lineWidth   = 2;
-  _propsRR(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
+  rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
   ctx.stroke();
 
   // Bowl
   ctx.fillStyle = "#d8e8f0";
-  _propsRR(ctx, x, y + h * 0.42, w, h * 0.58, 8);
+  rrPath(ctx, x, y + h * 0.42, w, h * 0.58, 8);
   ctx.fill();
   ctx.strokeStyle = "#8899aa";
   ctx.lineWidth   = 2;
-  _propsRR(ctx, x, y + h * 0.42, w, h * 0.58, 8);
+  rrPath(ctx, x, y + h * 0.42, w, h * 0.58, 8);
   ctx.stroke();
 
   // Water
   ctx.fillStyle   = "#b8d8f0";
   ctx.globalAlpha = 0.7;
-  _propsRR(ctx, x + 6, y + h * 0.55, w - 12, h * 0.32, 6);
+  rrPath(ctx, x + 6, y + h * 0.55, w - 12, h * 0.32, 6);
   ctx.fill();
   ctx.globalAlpha = 1;
 
@@ -274,19 +274,19 @@ function _drawPropFaucet(ctx, p, totalTime) {
 
   // Platform body — steel gradient-ish flat colour
   ctx.fillStyle   = "#aabbcc";
-  _propsRR(ctx, x, y, w, h, 5);
+  rrPath(ctx, x, y, w, h, 5);
   ctx.fill();
 
   // Sheen stripe
   ctx.fillStyle   = "#ddeeff";
   ctx.globalAlpha = 0.55;
-  _propsRR(ctx, x + 2, y + 2, w - 4, h * 0.4, 3);
+  rrPath(ctx, x + 2, y + 2, w - 4, h * 0.4, 3);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   ctx.strokeStyle = "#556677";
   ctx.lineWidth   = 2.5;
-  _propsRR(ctx, x, y, w, h, 5);
+  rrPath(ctx, x, y, w, h, 5);
   ctx.stroke();
 
   // Faucet nozzle on top-right
@@ -326,7 +326,7 @@ function _drawPropTrampoline(ctx, p) {
 
   // Mat base — slightly rounded
   ctx.fillStyle = "#ee4444";
-  _propsRR(ctx, x, y, w, h, 6);
+  rrPath(ctx, x, y, w, h, 6);
   ctx.fill();
 
   // Horizontal stripes
@@ -352,7 +352,7 @@ function _drawPropTrampoline(ctx, p) {
 
   ctx.strokeStyle = "#cc2222";
   ctx.lineWidth   = 2.5;
-  _propsRR(ctx, x, y, w, h, 6);
+  rrPath(ctx, x, y, w, h, 6);
   ctx.stroke();
 
   ctx.fillStyle    = "#ffffff";
@@ -455,7 +455,7 @@ function _drawPropCat(ctx, p) {
   ctx.fillStyle   = "#ff8833";
   ctx.strokeStyle = "#222222";
   ctx.lineWidth   = 2;
-  _propsRR(ctx, x + w * 0.1, y + h * 0.3, w * 0.8, h * 0.7, 8);
+  rrPath(ctx, x + w * 0.1, y + h * 0.3, w * 0.8, h * 0.7, 8);
   ctx.fill();
   ctx.stroke();
 
@@ -530,39 +530,24 @@ function _drawPropSoap(ctx, p) {
   // Blue tint over the surface
   ctx.fillStyle   = "#88bbff";
   ctx.globalAlpha = 0.45;
-  _propsRR(ctx, x, y, w, h, 5);
+  rrPath(ctx, x, y, w, h, 5);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   // Shiny specular strip
   ctx.fillStyle   = "#ffffff";
   ctx.globalAlpha = 0.55;
-  _propsRR(ctx, x + 4, y + 2, w - 8, 5, 2);
+  rrPath(ctx, x + 4, y + 2, w - 8, 5, 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   // Outline
   ctx.strokeStyle = "#3366cc";
   ctx.lineWidth   = 2;
-  _propsRR(ctx, x, y, w, h, 5);
+  rrPath(ctx, x, y, w, h, 5);
   ctx.stroke();
 
   ctx.restore();
 }
 
-// ---------------------------------------------------------------------------
-// Internal rounded-rect helper — same pattern as game.js / hud.js
-// ---------------------------------------------------------------------------
-function _propsRR(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+// rrPath() is now the shared global in constants.js — no local copy needed.

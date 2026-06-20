@@ -85,7 +85,7 @@ function _drawChildBar(ctx, childProgress) {
   ctx.fillStyle   = "rgba(30,30,50,0.55)";
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth   = 1.5;
-  _hudRoundRect(ctx, bx, by, bw, bh, 4);
+  rrPath(ctx, bx, by, bw, bh, 4);
   ctx.fill();
   ctx.stroke();
 
@@ -100,7 +100,7 @@ function _drawChildBar(ctx, childProgress) {
       gv = Math.round((1 - (fill - 0.5) * 2) * 200);
     }
     ctx.fillStyle = "rgb(" + r + "," + gv + ",30)";
-    _hudRoundRect(ctx, bx + 1, by + 1, (bw - 2) * fill, bh - 2, 3);
+    rrPath(ctx, bx + 1, by + 1, (bw - 2) * fill, bh - 2, 3);
     ctx.fill();
   }
 
@@ -131,26 +131,26 @@ function _drawDoor(ctx, childProgress) {
 
   // Door frame
   ctx.fillStyle   = "#8b6040";
-  _hudRoundRect(ctx, dx - 5, dy - 5, dw + 10, dh + 10, 5);
+  rrPath(ctx, dx - 5, dy - 5, dw + 10, dh + 10, 5);
   ctx.fill();
   ctx.strokeStyle = "#4a3020";
   ctx.lineWidth   = 3;
-  _hudRoundRect(ctx, dx - 5, dy - 5, dw + 10, dh + 10, 5);
+  rrPath(ctx, dx - 5, dy - 5, dw + 10, dh + 10, 5);
   ctx.stroke();
 
   // Door panel
   ctx.fillStyle = "#c8944a";
-  _hudRoundRect(ctx, dx, dy, dw, dh, 3);
+  rrPath(ctx, dx, dy, dw, dh, 3);
   ctx.fill();
   ctx.strokeStyle = "#4a3020";
   ctx.lineWidth   = 2;
-  _hudRoundRect(ctx, dx, dy, dw, dh, 3);
+  rrPath(ctx, dx, dy, dw, dh, 3);
   ctx.stroke();
 
   // Door panel inset detail
   ctx.strokeStyle = "rgba(80,50,20,0.4)";
   ctx.lineWidth   = 1;
-  _hudRoundRect(ctx, dx + 6, dy + 6, dw - 12, dh - 12, 2);
+  rrPath(ctx, dx + 6, dy + 6, dw - 12, dh - 12, 2);
   ctx.stroke();
 
   // Handle — dips downward when childProgress > 0.85
@@ -174,7 +174,7 @@ function _drawDoor(ctx, childProgress) {
     // Soft glow halo behind strip
     ctx.globalAlpha = 0.30 * fill;
     ctx.fillStyle   = "#ffee88";
-    _hudRoundRect(ctx, dx - 4, stripY - 2, dw + 8, stripMaxH + 4, 4);
+    rrPath(ctx, dx - 4, stripY - 2, dw + 8, stripMaxH + 4, 4);
     ctx.fill();
     ctx.globalAlpha = 1;
 
@@ -182,7 +182,7 @@ function _drawDoor(ctx, childProgress) {
     var lightAlpha = 0.65 + fill * 0.35;
     ctx.globalAlpha = lightAlpha;
     ctx.fillStyle   = "#ffe060";
-    _hudRoundRect(ctx, dx, stripY + (stripMaxH - stripH), dw, stripH, 2);
+    rrPath(ctx, dx, stripY + (stripMaxH - stripH), dw, stripH, 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -230,11 +230,11 @@ function drawLoseChildOverlay(ctx) {
 
   // Box
   ctx.fillStyle = "#fff0f0";
-  _hudRoundRect(ctx, bx, by, bw, bh, 18);
+  rrPath(ctx, bx, by, bw, bh, 18);
   ctx.fill();
   ctx.strokeStyle = "#cc2222";
   ctx.lineWidth   = 4;
-  _hudRoundRect(ctx, bx, by, bw, bh, 18);
+  rrPath(ctx, bx, by, bw, bh, 18);
   ctx.stroke();
 
   // Crying child figure (simple cartoon placeholder)
@@ -269,11 +269,11 @@ function drawLoseToiletOverlay(ctx) {
   var by = (CANVAS_H - bh) / 2;
 
   ctx.fillStyle = "#f0f8ff";
-  _hudRoundRect(ctx, bx, by, bw, bh, 18);
+  rrPath(ctx, bx, by, bw, bh, 18);
   ctx.fill();
   ctx.strokeStyle = "#336699";
   ctx.lineWidth   = 4;
-  _hudRoundRect(ctx, bx, by, bw, bh, 18);
+  rrPath(ctx, bx, by, bw, bh, 18);
   ctx.stroke();
 
   ctx.fillStyle    = "#003388";
@@ -303,7 +303,7 @@ function _drawCryingChild(ctx, cx, cy) {
   ctx.beginPath();
   ctx.roundRect
     ? ctx.roundRect(cx - 14, cy - 16, 28, 36, 6)
-    : (function(){ _hudRoundRect(ctx, cx - 14, cy - 16, 28, 36, 6); })();
+    : (function(){ rrPath(ctx, cx - 14, cy - 16, 28, 36, 6); })();
   ctx.fill();
   ctx.stroke();
 
@@ -368,20 +368,4 @@ function _drawCryingChild(ctx, cx, cy) {
   ctx.restore();
 }
 
-// ---------------------------------------------------------------------------
-// Internal rounded-rect path helper (mirrors game.js _roundRect, avoids
-// dependency — game.js is a closure and does not expose _roundRect)
-// ---------------------------------------------------------------------------
-function _hudRoundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+// rrPath() is now the shared global in constants.js — no local copy needed.

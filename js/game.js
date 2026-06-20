@@ -1,5 +1,6 @@
 // js/game.js — Main loop, state machine, update, draw orchestration.
-// Slice 8: Title screen, level-intro beat, bathroom backdrop, best-time persistence.
+// Slice 8+: Title screen, level-intro beat, bathroom backdrop, best-time persistence.
+//           + Mute button, LEVELSELECT screen, improved title layout.
 
 (function () {
   var canvas = document.getElementById("game");
@@ -33,8 +34,8 @@
   }
 
   // --- Mutable game state ---
-  // g.state: "TITLE" | "LEVEL_INTRO" | "PLAY" | "WIN_BEAT" | "WIN" |
-  //          "LOSE_CHILD" | "LOSE_TOILET" | "ALLCLEAR"
+  // g.state: "TITLE" | "LEVELSELECT" | "LEVEL_INTRO" | "PLAY" | "WIN_BEAT" |
+  //          "WIN" | "LOSE_CHILD" | "LOSE_TOILET" | "ALLCLEAR"
   var g = {
     levelIndex:    0,
     level:         null,
@@ -139,6 +140,11 @@
     // Juice system update (particles, shake, slow-mo decay) — always runs
     Juice.update(dt);
 
+    // M key toggles mute from any state
+    if (Input.pressed("KeyM")) {
+      SFX.toggleMute();
+    }
+
     // --- TITLE screen ---
     if (g.state === "TITLE") {
       // Cache best time once on entry so draw doesn't hit localStorage at 60fps
@@ -146,13 +152,41 @@
         g.bestTime   = bestTimeLoad();
         g._prevState = "TITLE";
       }
-      // Wait for SPACE to start Level 1.
-      // audio.js already hooks the first keydown globally to call zzfxInit(),
-      // so audio unlock happens on this same keypress — nothing extra needed here.
+      // SPACE = quick-start Level 1
       if (Input.pressed("Space")) {
         g.allclearTime = 0;
         g.isNewBest    = false;
         _startLevel(0);
+      }
+      // L = open level select
+      if (Input.pressed("KeyL")) {
+        g.state = "LEVELSELECT";
+        // leave g._prevState unchanged — LEVELSELECT entry guard will fire on first tick
+      }
+      return;
+    }
+
+    // --- LEVELSELECT screen ---
+    if (g.state === "LEVELSELECT") {
+      if (g._prevState !== "LEVELSELECT") {
+        g.bestTime   = bestTimeLoad();
+        g._prevState = "LEVELSELECT";
+      }
+      // Number keys 1/2/3 jump straight into a level
+      if (Input.pressed("Digit1")) {
+        g.allclearTime = 0; g.isNewBest = false; _startLevel(0);
+      }
+      if (Input.pressed("Digit2")) {
+        g.allclearTime = 0; g.isNewBest = false; _startLevel(1);
+      }
+      if (Input.pressed("Digit3")) {
+        g.allclearTime = 0; g.isNewBest = false; _startLevel(2);
+      }
+      // Esc / L return to title
+      if (Input.pressed("Escape") || Input.pressed("KeyL")) {
+        g.state           = "TITLE";
+        g._prevState      = "TITLE";
+        _hoveredTileIndex = -1;
       }
       return;
     }
@@ -193,7 +227,7 @@
       if (Input.pressed("KeyR")) {
         g.allclearTime = 0;
         g.state        = "TITLE";
-        g._prevState   = "TITLE";
+        g._prevState   = "";   // force TITLE entry guard to re-read best time from localStorage
       }
       return;
     }
@@ -329,9 +363,16 @@
     ctx.fillStyle = PAL.sky;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // TITLE and ALLCLEAR get their own full-screen treatment
+    // TITLE and LEVELSELECT get their own full-screen treatment
     if (g.state === "TITLE") {
       _drawTitleScreen(ctx);
+      _drawMuteButton(ctx);
+      return;
+    }
+
+    if (g.state === "LEVELSELECT") {
+      _drawLevelSelectScreen(ctx);
+      _drawMuteButton(ctx);
       return;
     }
 
@@ -385,10 +426,87 @@
     } else if (g.state === "PLAY") {
       drawHint(ctx);
     }
+
+    // Mute button drawn on top of everything on in-game screens too
+    _drawMuteButton(ctx);
   }
 
   // ---------------------------------------------------------------------------
-  // TITLE screen
+  // Mute button — speaker icon, TOP-RIGHT corner, all screens
+  //
+  // Icon geometry: circle at (cx,cy) r=11, speaker body + waves / slash when muted.
+  // Hit area: 44x44 px square centred on the icon (touch-friendly).
+  // ---------------------------------------------------------------------------
+  var MUTE_BTN = {
+    cx: CANVAS_W - 95,   // icon centre X — clear of the door HUD (x:885–951)
+    cy: 24,              // icon centre Y
+    r:  16               // hit-circle radius (generous)
+  };
+
+  function _drawMuteButton(ctx) {
+    var cx = MUTE_BTN.cx;
+    var cy = MUTE_BTN.cy;
+    var muted = SFX.isMuted();
+
+    ctx.save();
+
+    // Soft dark backing circle so the icon reads on any background
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(15,25,50,0.55)";
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    // Speaker body — a simple trapezoid
+    //  Left edge:   cx-9 to cx-9 (x), cy-5 to cy+5 (y)
+    //  Right edge:  cx-4 to cx-4,     cy-9 to cy+9
+    ctx.beginPath();
+    ctx.moveTo(cx - 9, cy - 4);
+    ctx.lineTo(cx - 9, cy + 4);
+    ctx.lineTo(cx - 2, cy + 9);
+    ctx.lineTo(cx - 2, cy - 9);
+    ctx.closePath();
+    ctx.fillStyle = muted ? "#ff5544" : "#ffffff";
+    ctx.fill();
+
+    if (muted) {
+      // Red cross / slash to indicate muted
+      ctx.strokeStyle = "#ff5544";
+      ctx.lineWidth   = 2.5;
+      ctx.lineCap     = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx + 3,  cy - 7);
+      ctx.lineTo(cx + 11, cy + 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + 11, cy - 7);
+      ctx.lineTo(cx + 3,  cy + 5);
+      ctx.stroke();
+    } else {
+      // Two concentric sound-wave arcs on the right side
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth   = 2;
+      ctx.lineCap     = "round";
+
+      // Inner arc (small)
+      ctx.beginPath();
+      ctx.arc(cx - 2, cy, 7, -Math.PI * 0.42, Math.PI * 0.42, false);
+      ctx.stroke();
+
+      // Outer arc (large)
+      ctx.beginPath();
+      ctx.arc(cx - 2, cy, 13, -Math.PI * 0.42, Math.PI * 0.42, false);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------------------
+  // TITLE screen — hero image area + buttons + controls + best time
   // ---------------------------------------------------------------------------
   function _drawTitleScreen(ctx) {
     // Bathroom backdrop also visible on title for atmosphere
@@ -397,53 +515,61 @@
     ctx.save();
 
     // Semi-transparent dark overlay so text pops
-    ctx.fillStyle = "rgba(10,20,40,0.48)";
+    ctx.fillStyle = "rgba(10,20,40,0.45)";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Main card
-    var bw = 620, bh = 320;
+    // --- Hero image area (upper-centre, ~16:9 proportions) ---
+    // This function is the ONE place a real image will be swapped in.
+    // To use a real image later, load it once at startup and draw it here:
+    //   var _heroImg = new Image(); _heroImg.src = "./assets/title-hero.png";
+    //   then replace drawTitleHero's placeholder body with:
+    //   ctx.drawImage(_heroImg, x, y, w, h);
+    var heroW = 540;
+    var heroH = Math.round(heroW * 9 / 16);   // 304 px — keeps 16:9
+    var heroX = (CANVAS_W - heroW) / 2;
+    var heroY = 30;
+    drawTitleHero(ctx, heroX, heroY, heroW, heroH);
+
+    // --- Main card — sits below the hero area ---
+    var bw = 580;
+    var bh = 230;
     var bx = (CANVAS_W - bw) / 2;
-    var by = (CANVAS_H - bh) / 2 - 10;
+    var by = heroY + heroH + 14;
 
     ctx.fillStyle = "#fffde8";
-    _roundRect(ctx, bx, by, bw, bh, 22);
+    rrPath(ctx, bx, by, bw, bh, 22);
     ctx.fill();
     ctx.strokeStyle = "#c89030";
     ctx.lineWidth   = 5;
-    _roundRect(ctx, bx, by, bw, bh, 22);
+    rrPath(ctx, bx, by, bw, bh, 22);
     ctx.stroke();
 
     // Title text
     ctx.fillStyle    = "#cc6600";
-    ctx.font         = "bold 52px system-ui, sans-serif";
+    ctx.font         = "bold 46px system-ui, sans-serif";
     ctx.textAlign    = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Ab in die Wanne!", CANVAS_W / 2, by + 28);
-
-    // Duck + tub emoji row
-    ctx.font = "36px system-ui, sans-serif";
-    ctx.fillText("🦆🛁", CANVAS_W / 2, by + 92);
+    ctx.fillText("Ab in die Wanne!", CANVAS_W / 2, by + 18);
 
     // One-liner goal
-    ctx.fillStyle    = "#443322";
-    ctx.font         = "14px system-ui, sans-serif";
+    ctx.fillStyle = "#443322";
+    ctx.font      = "13px system-ui, sans-serif";
     ctx.fillText(
       "Bring die Gummiente in die Wanne, bevor das Kind ins Bad kommt!",
-      CANVAS_W / 2, by + 144
+      CANVAS_W / 2, by + 72
     );
 
     // Controls summary
-    var cy2 = by + 180;
     ctx.fillStyle = "#334455";
-    ctx.font      = "13px system-ui, sans-serif";
-    ctx.fillText("SPACE halten = laden  ·  ←/→ = Richtung  ·  loslassen = Sprung  ·  R = neu", CANVAS_W / 2, cy2);
+    ctx.font      = "12px system-ui, sans-serif";
+    ctx.fillText("SPACE halten = laden  ·  ←/→ = Richtung  ·  loslassen = Sprung  ·  R = neu  ·  M = Ton", CANVAS_W / 2, by + 96);
 
     // Divider
-    ctx.strokeStyle  = "#ddc880";
-    ctx.lineWidth    = 1.5;
+    ctx.strokeStyle = "#ddc880";
+    ctx.lineWidth   = 1.5;
     ctx.beginPath();
-    ctx.moveTo(bx + 40, cy2 + 22);
-    ctx.lineTo(bx + bw - 40, cy2 + 22);
+    ctx.moveTo(bx + 40, by + 116);
+    ctx.lineTo(bx + bw - 40, by + 116);
     ctx.stroke();
 
     // Best time display (cached on TITLE entry — no per-frame localStorage read)
@@ -451,19 +577,259 @@
     if (best !== null && best !== undefined) {
       ctx.fillStyle = "#886600";
       ctx.font      = "13px system-ui, sans-serif";
-      ctx.fillText("Beste: " + Math.ceil(Math.max(0, best)) + " s Bonus", CANVAS_W / 2, cy2 + 36);
+      ctx.fillText("Beste: " + Math.ceil(Math.max(0, best)) + " s Bonus", CANVAS_W / 2, by + 128);
     }
 
-    // Prompt — pulse between two alpha values using totalTime
-    var pulse = 0.55 + 0.45 * Math.sin(g.totalTime * 3.2);
-    ctx.globalAlpha = pulse;
-    ctx.fillStyle   = "#cc5500";
-    ctx.font        = "bold 18px system-ui, sans-serif";
-    ctx.fillText("Drücke SPACE zum Starten", CANVAS_W / 2, by + bh - 40);
-    ctx.globalAlpha = 1;
+    // --- Two action buttons: START (Space) + LEVEL WÄHLEN (L) ---
+    var btnY   = by + 156;
+    var btnH   = 40;
+    var btnGap = 20;
+    var btnW   = 210;
+    var btn1X  = CANVAS_W / 2 - btnW - btnGap / 2;
+    var btn2X  = CANVAS_W / 2 + btnGap / 2;
+
+    // START button
+    ctx.fillStyle = "#dd6600";
+    rrPath(ctx, btn1X, btnY, btnW, btnH, 10);
+    ctx.fill();
+    ctx.strokeStyle = "#aa4400";
+    ctx.lineWidth   = 3;
+    rrPath(ctx, btn1X, btnY, btnW, btnH, 10);
+    ctx.stroke();
+
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = "bold 16px system-ui, sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.fillText("START  [SPACE]", btn1X + btnW / 2, btnY + btnH / 2);
+
+    // LEVEL WÄHLEN button
+    ctx.fillStyle = "#336699";
+    rrPath(ctx, btn2X, btnY, btnW, btnH, 10);
+    ctx.fill();
+    ctx.strokeStyle = "#224477";
+    ctx.lineWidth   = 3;
+    rrPath(ctx, btn2X, btnY, btnW, btnH, 10);
+    ctx.stroke();
+
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = "bold 16px system-ui, sans-serif";
+    ctx.fillText("LEVEL WÄHLEN  [L]", btn2X + btnW / 2, btnY + btnH / 2);
+
+    ctx.restore();
+
+    // Store button rects for click handling (in canvas-space coords)
+    _titleBtnRects.start  = { x: btn1X, y: btnY, w: btnW, h: btnH };
+    _titleBtnRects.select = { x: btn2X, y: btnY, w: btnW, h: btnH };
+  }
+
+  // Hero image placeholder — isolate here so a real image swap is ONE edit.
+  // Replace the body of this function when ./assets/title-hero.png is ready.
+  // To load a real image add at the top of the IIFE:
+  //   var _heroImg = new Image();
+  //   _heroImg.src = "./assets/title-hero.png";
+  // Then inside drawTitleHero replace the placeholder block with:
+  //   if (_heroImg.complete && _heroImg.naturalWidth) {
+  //     ctx.drawImage(_heroImg, x, y, w, h);
+  //   } else { /* draw placeholder below while loading */ }
+  function drawTitleHero(ctx, x, y, w, h) {
+    ctx.save();
+
+    // Placeholder: dark-blue framed rect with rubber-duck scene hint
+    ctx.fillStyle = "#1a2a4a";
+    rrPath(ctx, x, y, w, h, 12);
+    ctx.fill();
+
+    // Inner gradient-like fill (top lighter, simulating sky)
+    ctx.fillStyle = "#2a4a7a";
+    rrPath(ctx, x + 4, y + 4, w - 8, h * 0.55, 8);
+    ctx.fill();
+
+    // "Floor" / tub area at bottom of hero
+    ctx.fillStyle = "#1a3a5a";
+    ctx.fillRect(x + 4, y + h * 0.55, w - 8, h * 0.45 - 4);
+
+    // Rubber duck silhouette (simple yellow oval + beak)
+    var dcx = x + w * 0.5;
+    var dcy = y + h * 0.45;
+
+    ctx.fillStyle = "#f5d000";
+    ctx.beginPath();
+    ctx.ellipse(dcx, dcy, 34, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Duck head
+    ctx.beginPath();
+    ctx.arc(dcx + 26, dcy - 16, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Beak
+    ctx.fillStyle = "#e06010";
+    ctx.beginPath();
+    ctx.moveTo(dcx + 38, dcy - 16);
+    ctx.lineTo(dcx + 50, dcy - 13);
+    ctx.lineTo(dcx + 38, dcy - 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = "#111111";
+    ctx.beginPath();
+    ctx.arc(dcx + 30, dcy - 19, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(dcx + 31, dcy - 20, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tub outline
+    ctx.strokeStyle = "#4488bb";
+    ctx.lineWidth   = 3;
+    rrPath(ctx, x + w * 0.3, y + h * 0.62, w * 0.4, h * 0.28, 8);
+    ctx.stroke();
+
+    // Border frame for the hero area
+    ctx.strokeStyle = "#4488bb";
+    ctx.lineWidth   = 3;
+    rrPath(ctx, x, y, w, h, 12);
+    ctx.stroke();
+
+    // Small label indicating this is a placeholder
+    ctx.fillStyle    = "rgba(100,160,220,0.55)";
+    ctx.font         = "11px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("[ Titelbild kommt hier — ./assets/title-hero.png ]", x + w / 2, y + h - 6);
 
     ctx.restore();
   }
+
+  // ---------------------------------------------------------------------------
+  // LEVELSELECT screen
+  // ---------------------------------------------------------------------------
+  // Tile positions stored here so the click handler can hit-test them.
+  var _levelTileRects = [];
+
+  function _drawLevelSelectScreen(ctx) {
+    // Bathroom backdrop for atmosphere
+    drawBackdrop(ctx);
+
+    ctx.save();
+
+    ctx.fillStyle = "rgba(10,20,40,0.55)";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Screen title
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = "bold 38px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Level wählen", CANVAS_W / 2, 30);
+
+    ctx.fillStyle = "rgba(180,210,255,0.70)";
+    ctx.font      = "14px system-ui, sans-serif";
+    ctx.fillText("Klicken oder 1 / 2 / 3 drücken", CANVAS_W / 2, 80);
+
+    // --- Level tiles ---
+    var tileW  = 240;
+    var tileH  = 200;
+    var tileGap = 36;
+    var totalW  = LEVELS.length * tileW + (LEVELS.length - 1) * tileGap;
+    var startX  = (CANVAS_W - totalW) / 2;
+    var tileY   = 120;
+
+    _levelTileRects = [];   // reset each frame so coords stay fresh
+
+    for (var i = 0; i < LEVELS.length; i++) {
+      var lvl  = LEVELS[i];
+      var tx   = startX + i * (tileW + tileGap);
+
+      _levelTileRects.push({ x: tx, y: tileY, w: tileW, h: tileH, index: i });
+
+      // Tile background
+      var isHovered = (i === _hoveredTileIndex);
+      ctx.fillStyle = isHovered ? "#264a72" : "#1e3a5a";
+      rrPath(ctx, tx, tileY, tileW, tileH, 14);
+      ctx.fill();
+      ctx.strokeStyle = isHovered ? "#88ccff" : "#4488cc";
+      ctx.lineWidth   = isHovered ? 4 : 3;
+      rrPath(ctx, tx, tileY, tileW, tileH, 14);
+      ctx.stroke();
+
+      // Subtle inset glow on hover
+      if (isHovered) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(136,204,255,0.30)";
+        ctx.lineWidth   = 8;
+        rrPath(ctx, tx + 4, tileY + 4, tileW - 8, tileH - 8, 11);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Level number badge
+      ctx.fillStyle = "#4488cc";
+      rrPath(ctx, tx + 10, tileY + 10, 44, 44, 8);
+      ctx.fill();
+      ctx.fillStyle    = "#ffffff";
+      ctx.font         = "bold 26px system-ui, sans-serif";
+      ctx.textAlign    = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(i + 1), tx + 32, tileY + 32);
+
+      // Level name
+      ctx.fillStyle    = "#e8f4ff";
+      ctx.font         = "bold 18px system-ui, sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillText(lvl.name, tx + tileW / 2, tileY + 70);
+
+      // Time limit info
+      ctx.fillStyle = "#88aacc";
+      ctx.font      = "13px system-ui, sans-serif";
+      ctx.fillText("Zeit: " + lvl.timeLimit + " s", tx + tileW / 2, tileY + 104);
+
+      // Best time (shared localStorage value — whole-game best, not per-level)
+      // Per-level bests aren't tracked yet; show a dash until the system is extended.
+      ctx.fillStyle = "#aaccee";
+      ctx.font      = "12px system-ui, sans-serif";
+      ctx.fillText("Beste: —", tx + tileW / 2, tileY + 130);
+
+      // Key hint at bottom of tile
+      ctx.fillStyle    = "rgba(100,160,220,0.65)";
+      ctx.font         = "bold 13px system-ui, sans-serif";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("[" + (i + 1) + "]", tx + tileW / 2, tileY + tileH - 10);
+    }
+
+    // Back button
+    var backW = 160, backH = 38;
+    var backX = (CANVAS_W - backW) / 2;
+    var backY = tileY + tileH + 28;
+
+    ctx.fillStyle = "rgba(40,60,100,0.85)";
+    rrPath(ctx, backX, backY, backW, backH, 10);
+    ctx.fill();
+    ctx.strokeStyle = "#6699cc";
+    ctx.lineWidth   = 2;
+    rrPath(ctx, backX, backY, backW, backH, 10);
+    ctx.stroke();
+
+    ctx.fillStyle    = "#cce4ff";
+    ctx.font         = "bold 15px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Zurück  [Esc]", backX + backW / 2, backY + backH / 2);
+
+    ctx.restore();
+
+    // Store back button rect for click handling
+    _levelSelectBackRect = { x: backX, y: backY, w: backW, h: backH };
+  }
+
+  // Rects for click handling — updated each draw call
+  var _titleBtnRects       = { start: null, select: null };
+  var _levelSelectBackRect = null;
+
+  // Hover state for LEVELSELECT tiles — -1 means no tile hovered
+  var _hoveredTileIndex = -1;
 
   // ---------------------------------------------------------------------------
   // Level-intro banner — fades in/out over 1.2 s, timer paused meanwhile
@@ -484,11 +850,11 @@
     var by = (CANVAS_H - bh) / 2 - (1 - alpha) * 40;
 
     ctx.fillStyle = "#1a2a4a";
-    _roundRect(ctx, bx, by, bw, bh, 14);
+    rrPath(ctx, bx, by, bw, bh, 14);
     ctx.fill();
     ctx.strokeStyle = "#4488cc";
     ctx.lineWidth   = 3;
-    _roundRect(ctx, bx, by, bw, bh, 14);
+    rrPath(ctx, bx, by, bw, bh, 14);
     ctx.stroke();
 
     ctx.fillStyle    = "#ffffff";
@@ -520,7 +886,7 @@
 
       if (isFloor) {
         ctx.fillStyle   = PAL.ground;
-        _roundRect(ctx, p.x, p.y, p.w, p.h, 4);
+        rrPath(ctx, p.x, p.y, p.w, p.h, 4);
         ctx.fill();
         ctx.strokeStyle = PAL.outline;
         ctx.lineWidth   = 1.5;
@@ -529,26 +895,26 @@
         var isSoap = (p.surface === "soap");
 
         ctx.fillStyle = isSoap ? "#99ccee" : "#c8a878";
-        _roundRect(ctx, p.x, p.y, p.w, p.h, 6);
+        rrPath(ctx, p.x, p.y, p.w, p.h, 6);
         ctx.fill();
 
         // Top stripe
         ctx.fillStyle = isSoap ? "#bbddff" : "#dbbe94";
-        _roundRect(ctx, p.x, p.y, p.w, 6, 4);
+        rrPath(ctx, p.x, p.y, p.w, 6, 4);
         ctx.fill();
 
         if (isSoap) {
           // Shiny specular streak
           ctx.fillStyle   = "#ffffff";
           ctx.globalAlpha = 0.5;
-          _roundRect(ctx, p.x + 4, p.y + 2, p.w - 8, 4, 2);
+          rrPath(ctx, p.x + 4, p.y + 2, p.w - 8, 4, 2);
           ctx.fill();
           ctx.globalAlpha = 1;
         }
 
         ctx.strokeStyle = isSoap ? "#3366cc" : PAL.outline;
         ctx.lineWidth   = 2.5;
-        _roundRect(ctx, p.x, p.y, p.w, p.h, 6);
+        rrPath(ctx, p.x, p.y, p.w, p.h, 6);
         ctx.stroke();
 
         if (p.label) {
@@ -573,16 +939,16 @@
     ctx.save();
 
     ctx.fillStyle = "#b8e8f8";
-    _roundRect(ctx, tx, ty, tw, th, 12);
+    rrPath(ctx, tx, ty, tw, th, 12);
     ctx.fill();
 
     ctx.fillStyle = "#d4f0fc";
-    _roundRect(ctx, tx + 6, ty + 6, tw - 12, th * 0.45, 6);
+    rrPath(ctx, tx + 6, ty + 6, tw - 12, th * 0.45, 6);
     ctx.fill();
 
     ctx.strokeStyle = PAL.outline;
     ctx.lineWidth   = 3;
-    _roundRect(ctx, tx, ty, tw, th, 12);
+    rrPath(ctx, tx, ty, tw, th, 12);
     ctx.stroke();
 
     ctx.strokeStyle  = "#ffffff";
@@ -616,11 +982,11 @@
     var by = (CANVAS_H - bh) / 2;
 
     ctx.fillStyle = "#fffae8";
-    _roundRect(ctx, bx, by, bw, bh, 18);
+    rrPath(ctx, bx, by, bw, bh, 18);
     ctx.fill();
     ctx.strokeStyle = PAL.outline;
     ctx.lineWidth   = 4;
-    _roundRect(ctx, bx, by, bw, bh, 18);
+    rrPath(ctx, bx, by, bw, bh, 18);
     ctx.stroke();
 
     ctx.fillStyle    = "#226611";
@@ -655,11 +1021,11 @@
     var by = (CANVAS_H - bh) / 2;
 
     ctx.fillStyle = "#eefff0";
-    _roundRect(ctx, bx, by, bw, bh, 18);
+    rrPath(ctx, bx, by, bw, bh, 18);
     ctx.fill();
     ctx.strokeStyle = "#228833";
     ctx.lineWidth   = 4;
-    _roundRect(ctx, bx, by, bw, bh, 18);
+    rrPath(ctx, bx, by, bw, bh, 18);
     ctx.stroke();
 
     ctx.fillStyle    = "#115522";
@@ -697,11 +1063,11 @@
     var by = (CANVAS_H - bh) / 2;
 
     ctx.fillStyle = "#fffde8";
-    _roundRect(ctx, bx, by, bw, bh, 22);
+    rrPath(ctx, bx, by, bw, bh, 22);
     ctx.fill();
     ctx.strokeStyle = "#aa8800";
     ctx.lineWidth   = 5;
-    _roundRect(ctx, bx, by, bw, bh, 22);
+    rrPath(ctx, bx, by, bw, bh, 22);
     ctx.stroke();
 
     ctx.fillStyle    = "#aa6600";
@@ -785,7 +1151,7 @@
     ctx.fillStyle   = PAL.powerBg;
     ctx.strokeStyle = PAL.powerBorder;
     ctx.lineWidth   = 1.5;
-    _roundRect(ctx, mx, my, mw, mh, 4);
+    rrPath(ctx, mx, my, mw, mh, 4);
     ctx.fill();
     ctx.stroke();
 
@@ -793,7 +1159,7 @@
       var r  = Math.round(255 * Math.min(1, duck.power * 2));
       var gv = Math.round(255 * Math.min(1, (1 - duck.power) * 2));
       ctx.fillStyle = "rgb(" + r + "," + gv + ",30)";
-      _roundRect(ctx, mx + 1, my + 1, (mw - 2) * duck.power, mh - 2, 3);
+      rrPath(ctx, mx + 1, my + 1, (mw - 2) * duck.power, mh - 2, 3);
       ctx.fill();
     }
 
@@ -808,12 +1174,12 @@
   // Level badge — small top-left indicator of current level
   // ---------------------------------------------------------------------------
   function _drawLevelBadge(ctx, levelIndex, totalLevels) {
-    if (g.state === "TITLE" || g.state === "ALLCLEAR") return;
+    if (g.state === "TITLE" || g.state === "LEVELSELECT" || g.state === "ALLCLEAR") return;
     var lvl = LEVELS[levelIndex];
     if (!lvl) return;
     ctx.save();
     ctx.fillStyle    = "rgba(20,20,40,0.55)";
-    _roundRect(ctx, 8, 6, 140, 32, 6);
+    rrPath(ctx, 8, 6, 140, 32, 6);
     ctx.fill();
     ctx.fillStyle    = "#ffffff";
     ctx.font         = "bold 11px system-ui, sans-serif";
@@ -841,20 +1207,88 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Shared rounded-rect path helper
+  // Mouse / click handling
+  //
+  // The canvas may be CSS-scaled (style width != canvas pixel width).
+  // getBoundingClientRect() gives the rendered size; we scale the mouse
+  // coords back to canvas-space before hit-testing.
   // ---------------------------------------------------------------------------
-  function _roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
+  canvas.addEventListener("click", function (e) {
+    var rect  = canvas.getBoundingClientRect();
+    var scaleX = CANVAS_W / rect.width;
+    var scaleY = CANVAS_H / rect.height;
+    var cx    = (e.clientX - rect.left) * scaleX;
+    var cy    = (e.clientY - rect.top)  * scaleY;
+
+    // Mute button — always active (icon is at MUTE_BTN.cx, MUTE_BTN.cy)
+    var mdx = cx - MUTE_BTN.cx;
+    var mdy = cy - MUTE_BTN.cy;
+    if (Math.sqrt(mdx * mdx + mdy * mdy) <= MUTE_BTN.r) {
+      SFX.toggleMute();
+      return;
+    }
+
+    // --- TITLE buttons ---
+    if (g.state === "TITLE") {
+      if (_hitRect(cx, cy, _titleBtnRects.start)) {
+        g.allclearTime = 0;
+        g.isNewBest    = false;
+        _startLevel(0);
+        return;
+      }
+      if (_hitRect(cx, cy, _titleBtnRects.select)) {
+        g.state = "LEVELSELECT";
+        // leave g._prevState unchanged — LEVELSELECT entry guard will fire on first tick
+        return;
+      }
+    }
+
+    // --- LEVELSELECT tiles + back button ---
+    if (g.state === "LEVELSELECT") {
+      for (var i = 0; i < _levelTileRects.length; i++) {
+        if (_hitRect(cx, cy, _levelTileRects[i])) {
+          g.allclearTime = 0;
+          g.isNewBest    = false;
+          _startLevel(_levelTileRects[i].index);
+          return;
+        }
+      }
+      if (_levelSelectBackRect && _hitRect(cx, cy, _levelSelectBackRect)) {
+        g.state      = "TITLE";
+        g._prevState = "TITLE";
+        return;
+      }
+    }
+  });
+
+  // Mousemove — tracks which LEVELSELECT tile the cursor is over.
+  // Uses the same getBoundingClientRect scale mapping as the click handler.
+  canvas.addEventListener("mousemove", function (e) {
+    if (g.state !== "LEVELSELECT") {
+      if (_hoveredTileIndex !== -1) { _hoveredTileIndex = -1; }
+      return;
+    }
+    var rect   = canvas.getBoundingClientRect();
+    var scaleX = CANVAS_W / rect.width;
+    var scaleY = CANVAS_H / rect.height;
+    var cx     = (e.clientX - rect.left) * scaleX;
+    var cy     = (e.clientY - rect.top)  * scaleY;
+
+    var found = -1;
+    for (var i = 0; i < _levelTileRects.length; i++) {
+      if (_hitRect(cx, cy, _levelTileRects[i])) {
+        found = i;
+        break;
+      }
+    }
+    _hoveredTileIndex = found;
+  });
+
+  // Point-in-rect helper
+  function _hitRect(px, py, rect) {
+    if (!rect) return false;
+    return px >= rect.x && px <= rect.x + rect.w &&
+           py >= rect.y && py <= rect.y + rect.h;
   }
 
   // --- Kick off ---

@@ -70,12 +70,12 @@ function drawBackdrop(ctx) {
   var mx = 30, my = 70, mw = 100, mh = 140;
   ctx.fillStyle   = "#d8eef8";
   ctx.globalAlpha = 0.55;
-  _bdRoundRect(ctx, mx, my, mw, mh, 6);
+  rrPath(ctx, mx, my, mw, mh, 6);
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.strokeStyle = "#b0ccd8";
   ctx.lineWidth   = 1.5;
-  _bdRoundRect(ctx, mx, my, mw, mh, 6);
+  rrPath(ctx, mx, my, mw, mh, 6);
   ctx.stroke();
 
   // Mirror highlight streak
@@ -93,7 +93,7 @@ function drawBackdrop(ctx) {
   // Mirror frame border (slightly darker)
   ctx.strokeStyle = "#98bece";
   ctx.lineWidth   = 3;
-  _bdRoundRect(ctx, mx, my, mw, mh, 6);
+  rrPath(ctx, mx, my, mw, mh, 6);
   ctx.stroke();
 
   // --- Towel rail shape (top-right area) ---
@@ -101,12 +101,12 @@ function drawBackdrop(ctx) {
   var railX = CANVAS_W - 200, railY = 180, railW = 140, railH = 8;
   ctx.fillStyle   = "#c0d8e4";
   ctx.globalAlpha = 0.70;
-  _bdRoundRect(ctx, railX, railY, railW, railH, 4);
+  rrPath(ctx, railX, railY, railW, railH, 4);
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.strokeStyle = "#a8c4d0";
   ctx.lineWidth   = 1.5;
-  _bdRoundRect(ctx, railX, railY, railW, railH, 4);
+  rrPath(ctx, railX, railY, railW, railH, 4);
   ctx.stroke();
 
   // Rail end caps
@@ -123,26 +123,11 @@ function drawBackdrop(ctx) {
   // Hanging towel shape — draped rectangle below the rail
   ctx.fillStyle   = "#c8e8f0";
   ctx.globalAlpha = 0.50;
-  _bdRoundRect(ctx, railX + railW * 0.3, railY + railH, railW * 0.4, 60, 4);
+  rrPath(ctx, railX + railW * 0.3, railY + railH, railW * 0.4, 60, 4);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   ctx.restore();
 }
 
-// ---------------------------------------------------------------------------
-// Internal rounded-rect path helper — backdrop-local, no deps on other files.
-// ---------------------------------------------------------------------------
-function _bdRoundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+// rrPath() is now the shared global in constants.js — no local copy needed.
