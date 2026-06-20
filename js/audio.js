@@ -67,9 +67,9 @@ var SFX = (function () {
       zzfx(0.20, 0.02, 900, 0, 0, 0.04, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Footstep — dull soft thud (child approaching).
+    // Footstep — dull soft thud (child approaching). Quiet + sparse on purpose.
     step: function () {
-      zzfx(0.18, 0.08, 60, 0, 0.01, 0.07, 2, 0.4, -0.5, 0, 0, 0, 0, 0.15, 0, 0, 0, 1, 0.04, 0);
+      zzfx(0.10, 0.06, 80, 0, 0.01, 0.06, 2, 0.4, -0.5, 0, 0, 0, 0, 0.12, 0, 0, 0, 1, 0.04, 0);
     },
 
     // Win fanfare — short major-chord sting when level is cleared.

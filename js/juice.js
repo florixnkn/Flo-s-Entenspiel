@@ -36,9 +36,11 @@ var JUICE_CAT_COUNT         = 6;     // particles per cat-hit puff
 
 var JUICE_MAX_PARTICLES     = 80;    // hard cap — never exceed this pool
 
-// Footstep timing: interval lerps from MIN (slow) to MAX (fast) as childProgress rises.
-var JUICE_STEP_INTERVAL_MIN = 1.20;  // s between steps when child is far
-var JUICE_STEP_INTERVAL_MAX = 0.28;  // s between steps when child is almost in
+// Footstep timing: silent until the child is genuinely close, then interval
+// lerps from MIN (slow) to MAX (fast). Kept sparse + quiet so it doesn't spam.
+var JUICE_STEP_START        = 0.50;  // childProgress before footsteps begin at all
+var JUICE_STEP_INTERVAL_MIN = 0.85;  // s between steps when child first becomes audible
+var JUICE_STEP_INTERVAL_MAX = 0.45;  // s between steps when child is almost in
 
 var JUICE_CLOCK_PULSE_DUR   = 0.18;  // s — how long each tick pulse lasts on clock
 
@@ -224,7 +226,15 @@ var Juice = (function () {
   // ---------------------------------------------------------------------------
   function updateFootstep(childProgress, dt) {
     var t = Math.max(0, Math.min(1, childProgress));
-    var interval = JUICE_STEP_INTERVAL_MIN + (JUICE_STEP_INTERVAL_MAX - JUICE_STEP_INTERVAL_MIN) * t;
+    // Stay silent until the child is genuinely close. This loop used to fire the
+    // whole level long, even while the player stood still aiming — that read as
+    // a constantly-repeating / "hanging" thud. Now it only kicks in late.
+    if (t < JUICE_STEP_START) {
+      _stepTimer = JUICE_STEP_INTERVAL_MIN;
+      return;
+    }
+    var k = (t - JUICE_STEP_START) / (1 - JUICE_STEP_START);
+    var interval = JUICE_STEP_INTERVAL_MIN + (JUICE_STEP_INTERVAL_MAX - JUICE_STEP_INTERVAL_MIN) * k;
 
     _stepTimer -= dt;
     if (_stepTimer <= 0) {
