@@ -32,6 +32,9 @@ var STRETCH_DURATION = 0.12; // how long the launch stretch lasts
 var LAND_SQUASH_DUR  = 0.10; // squash on land
 var SETTLE_DUR       = 0.08; // bounce-back to normal after land squash
 
+// --- Audio ---
+var LAND_SOUND_COOLDOWN = 2.0; // s — min gap between land SFX (stops rapid re-fire on multi-landings)
+
 // --- Cartoon palette ---
 var PAL = {
   sky:        "#d6f0ff",   // background
