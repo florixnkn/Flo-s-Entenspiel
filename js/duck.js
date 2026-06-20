@@ -29,9 +29,6 @@ function createDuck(startX, startY) {
 
     // Cat stun — set by props.js; duckUpdate blocks input while > 0
     stunTime: 0,
-
-    // Land-SFX cooldown timer (rate-limits the land sound; see LAND_SOUND_COOLDOWN)
-    landSfxCd: 0,
   };
 }
 
@@ -53,7 +50,6 @@ function duckReset(duck, startX, startY) {
   duck.triggerLand = false;
   duck.fellOff  = false;
   duck.stunTime = 0;
-  duck.landSfxCd = 0;
 }
 
 function duckUpdate(duck, dt, platforms) {
@@ -62,9 +58,6 @@ function duckUpdate(duck, dt, platforms) {
   // (game.js) which reads duck.fellOff and triggers duckReset.
   duck.fellOff = (duck.y - duck.radius > CANVAS_H);
   if (duck.fellOff) { return; }
-
-  // Land-sound cooldown tick (rate-limits the land SFX)
-  if (duck.landSfxCd > 0) { duck.landSfxCd -= dt; }
 
   // --- Input: facing direction (only while NOT airborne, for clarity;
   //     SPEC allows direction change always) ---
@@ -162,13 +155,8 @@ function _duckLand(duck) {
   duck.scaleX   = 1 + 0.25;   // squash wide on impact
   duck.scaleY   = 0.65;
 
-  // Juice: land SFX (rate-limited) + dust puff + screenshake.
-  // The sound is gated by a cooldown so rapid multi-landings (settle-hops, edge
-  // tumbles) don't fire it 2-3x in a row; dust + shake still play per landing.
-  if (duck.landSfxCd <= 0) {
-    SFX.land();
-    duck.landSfxCd = LAND_SOUND_COOLDOWN;
-  }
+  // Juice: land SFX + dust puff + screenshake
+  SFX.land();
   Juice.landDust(duck.x, duck.y + duck.radius);
   Juice.shake(JUICE_SHAKE_LAND_MAG, JUICE_SHAKE_LAND_DUR);
 }
