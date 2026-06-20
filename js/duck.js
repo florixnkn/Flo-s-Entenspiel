@@ -104,10 +104,15 @@ function duckUpdate(duck, dt, platforms) {
     duck.y  += duck.vy * dt;
 
     // Resolve collisions
+    var wasOnGround = duck.onGround;
     resolveAllPlatforms(duck, platforms);
 
-    // Handle landing trigger from collision
-    if (duck.triggerLand) {
+    // Fire the land effects ONLY on the airborne -> grounded transition.
+    // triggerLand is set every frame the duck rests on a platform (gravity re-sinks
+    // it each tick, so the resolver re-lands it). Without the !wasOnGround guard the
+    // land SFX/dust/shake machine-gun ~60x/s while standing still — that was the loud
+    // noise heard when idle, and it stopped while charging (physics block is skipped).
+    if (duck.triggerLand && !wasOnGround) {
       _duckLand(duck);
     }
 
