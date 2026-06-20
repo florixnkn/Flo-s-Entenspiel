@@ -32,10 +32,6 @@ var STRETCH_DURATION = 0.12; // how long the launch stretch lasts
 var LAND_SQUASH_DUR  = 0.10; // squash on land
 var SETTLE_DUR       = 0.08; // bounce-back to normal after land squash
 
-// --- Ground platform ---
-var GROUND_Y = 548;  // y of ground platform top surface
-var GROUND_H = 52;   // height of ground rect (fills to bottom of canvas)
-
 // --- Cartoon palette ---
 var PAL = {
   sky:        "#d6f0ff",   // background

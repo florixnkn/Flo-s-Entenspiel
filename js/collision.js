@@ -46,13 +46,16 @@ function resolveCircleRect(duck, platform) {
   var wasRight = (prevCx - r) >= (rx + rw - LAND_TOLERANCE);
 
   if (wasAbove) {
-    // Landing on top surface
+    // Landing on top surface — position correction always applies
     duck.y      = ry - r;
     duck.vy     = 0;
     duck.onGround = true;
-    var friction = (platform.surface === "soap") ? SOAP_FRICTION : GROUND_FRICTION;
-    duck.vx    *= friction;
-    duck.triggerLand = true;
+    // Apply friction and land trigger only once per tick (guard against seam doubles)
+    if (!duck.triggerLand) {
+      var friction = (platform.surface === "soap") ? SOAP_FRICTION : GROUND_FRICTION;
+      duck.vx    *= friction;
+      duck.triggerLand = true;
+    }
   } else if (wasBelow) {
     // Head bump against bottom of platform
     duck.y   = ry + rh + r;
@@ -76,8 +79,10 @@ function resolveCircleRect(duck, platform) {
       duck.y = ry - r;
       duck.vy = 0;
       duck.onGround = true;
-      duck.vx *= GROUND_FRICTION;
-      duck.triggerLand = true;
+      if (!duck.triggerLand) {
+        duck.vx *= GROUND_FRICTION;
+        duck.triggerLand = true;
+      }
     } else if (minO === overlapBottom) {
       duck.y  = ry + rh + r;
       duck.vy = Math.abs(duck.vy) * BOUNCE_DAMPEN;

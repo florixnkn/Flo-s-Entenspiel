@@ -48,6 +48,12 @@ function duckReset(duck, startX, startY) {
 }
 
 function duckUpdate(duck, dt, platforms) {
+  // Fall-off-bottom check runs every tick regardless of charge state,
+  // so a charging duck can still respawn. Actual reset is done by the caller
+  // (game.js) which reads duck.fellOff and triggers duckReset.
+  duck.fellOff = (duck.y - duck.radius > CANVAS_H);
+  if (duck.fellOff) { return; }
+
   // --- Input: facing direction (only while NOT airborne, for clarity;
   //     SPEC allows direction change always) ---
   if (Input.held("ArrowLeft"))  duck.facing = -1;
