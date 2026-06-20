@@ -3,15 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Building Challenge - Dein Minigame</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Ab in die Wanne! 🦆</title>
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main>
-      <h1>Dein Minigame</h1>
-      <canvas id="game" width="800" height="600"></canvas>
-      <p id="hint">Dein Spiel startet in <code>game.js</code>. Viel Erfolg!</p>
-    </main>
-    <script src="game.js"></script>
+    <canvas id="game" width="960" height="600"></canvas>
+
+    <!-- Classic <script> tags — no ES modules, file://-safe -->
+    <script src="./js/constants.js"></script>
+    <script src="./js/input.js"></script>
+    <script src="./js/collision.js"></script>
+    <script src="./js/duck.js"></script>
+    <script src="./js/game.js"></script>
   </body>
 </html>
