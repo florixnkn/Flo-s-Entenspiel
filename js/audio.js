@@ -66,59 +66,59 @@ var SFX = (function () {
       return _muted;
     },
 
-    // Duck "squeak" on every jump — high, rubbery sine blip.
+    // Duck "squeak" on every jump — soft sine blip, warmer than before.
     squeak: function () {
-      _play(0.25, 0.08, 520, 0, 0.06, 0.12, 0, 1.5, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
+      _play(0.20, 0.05, 440, 0.01, 0.05, 0.13, 0, 2, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Land thud — short low thump on platform landing.
+    // Land thud — gentle low thump on platform landing.
     land: function () {
-      _play(0.30, 0.05, 90, 0, 0.01, 0.08, 2, 0.5, -1.2, 0, 0, 0, 0, 0.1, 0, 0, 0, 1, 0.05, 0);
+      _play(0.26, 0.04, 85, 0.005, 0.02, 0.10, 1, 0.6, -1.0, 0, 0, 0, 0, 0.05, 0, 0, 0, 1, 0.06, 0);
     },
 
-    // Trampoline boing — springy upward whoop.
+    // Trampoline boing — springy upward whoop, triangle wave.
     boing: function () {
-      _play(0.30, 0.04, 180, 0, 0.04, 0.18, 1, 1, 2.5, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
+      _play(0.26, 0.04, 170, 0.01, 0.05, 0.18, 1, 1, 2.2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Splash / win — water entry plunge + shimmer (played on tub entry).
+    // Splash — water entry plunge, less noisy than before.
     splash: function () {
-      _play(0.35, 0.1, 280, 0, 0.05, 0.28, 4, 1, -1.8, 0, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0);
+      _play(0.28, 0.06, 240, 0.02, 0.06, 0.34, 4, 1, -1.4, 0, 0, 0, 0, 0.25, 0, 0, 0, 1, 0, 0);
     },
 
-    // Toilet plop — comedy low-pitched bubble + thud.
+    // Toilet plop — warm low-pitched bubble + thud.
     plop: function () {
-      _play(0.40, 0.06, 55, 0, 0.05, 0.22, 0, 0.8, -1.6, 0, 0, 0, 0, 0.3, 0, 0, 0, 1, 0.08, 0);
+      _play(0.34, 0.05, 55, 0.005, 0.05, 0.22, 0, 0.8, -1.5, 0, 0, 0, 0, 0.2, 0, 0, 0, 1, 0.08, 0);
     },
 
-    // Crying child — descending trombone wail.
+    // Crying child — gentler descending triangle wail.
     cry: function () {
-      _play(0.30, 0.05, 340, 0.04, 0.1, 0.5, 1, 0.5, -1.4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
+      _play(0.26, 0.04, 300, 0.06, 0.10, 0.5, 1, 0.6, -1.2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Cat hit — percussive hiss + blip.
+    // Cat hit — softer percussive blip, reduced noise.
     catHit: function () {
-      _play(0.28, 0.15, 380, 0, 0.02, 0.14, 2, 1, 0.5, 0, 80, 0.05, 0, 0.2, 0, 0, 0, 1, 0.03, 0);
+      _play(0.22, 0.08, 300, 0.005, 0.03, 0.14, 1, 1, 0.4, 0, 60, 0.05, 0, 0.08, 0, 0, 0, 1, 0.03, 0);
     },
 
-    // Tick — short, sharp, high metronome click (last 5 seconds).
+    // Tick — quieter 680 Hz triangle click (last 5 seconds).
     tick: function () {
-      _play(0.20, 0.02, 900, 0, 0, 0.04, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
+      _play(0.14, 0.02, 680, 0.004, 0, 0.05, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Footstep — dull soft thud (child approaching). Quiet + sparse on purpose.
+    // Footstep — soft warm thud (child approaching). Quiet + sparse on purpose.
     step: function () {
-      _play(0.10, 0.06, 80, 0, 0.01, 0.06, 2, 0.4, -0.5, 0, 0, 0, 0, 0.12, 0, 0, 0, 1, 0.04, 0);
+      _play(0.09, 0.05, 75, 0.005, 0.01, 0.06, 1, 0.5, -0.4, 0, 0, 0, 0, 0.06, 0, 0, 0, 1, 0.04, 0);
     },
 
-    // Win fanfare — short major-chord sting when level is cleared.
+    // Win fanfare — warm sine sting when level is cleared.
     win: function () {
-      _play(0.32, 0.03, 520, 0.02, 0.12, 0.22, 0, 1, 0.3, 0, 260, 0.08, 0, 0, 0, 0, 0, 1, 0, 0);
+      _play(0.28, 0.03, 440, 0.02, 0.12, 0.22, 0, 1.5, 0.2, 0, 220, 0.09, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // All-clear jingle — slightly grander, double-pitch jump.
+    // All-clear jingle — slightly grander, gentle double-pitch jump.
     allclear: function () {
-      _play(0.35, 0.03, 440, 0.02, 0.18, 0.35, 0, 1, 0.2, 0, 440, 0.12, 0, 0, 0, 0, 0, 1, 0, 0);
+      _play(0.30, 0.03, 392, 0.03, 0.18, 0.36, 0, 1.5, 0.15, 0, 392, 0.12, 0, 0, 0, 0, 0, 1, 0, 0);
     }
   };
 
