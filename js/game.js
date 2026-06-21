@@ -905,6 +905,18 @@
   // Top visual edge always matches p.y (collision-safe); fixtures may extend
   // below p.y+p.h for cosmetic depth.  No debug text labels drawn.
   // ---------------------------------------------------------------------------
+
+  // Draw a furniture sprite for a platform. surfaceFrac = fraction of the sprite
+  // height (from its top) where the flat standing surface sits; that line is
+  // aligned to the platform top (p.y). widthScale = sprite width vs platform width.
+  function _drawFixtureSprite(ctx, img, p, surfaceFrac, widthScale) {
+    var dw = p.w * widthScale;
+    var dh = dw * (img.naturalHeight / img.naturalWidth);
+    var dx = p.x + p.w / 2 - dw / 2;     // centered on the platform
+    var dy = p.y - surfaceFrac * dh;     // align standing surface to p.y
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
   function drawPlatforms(ctx, platforms) {
     for (var i = 0; i < platforms.length; i++) {
       var p = platforms[i];
@@ -959,6 +971,7 @@
 
   // Schrank — wooden cabinet with two door panels and round knobs
   function _drawPlatSchrank(ctx, p) {
+    if (imgReady(IMG.furnSchrank)) { _drawFixtureSprite(ctx, IMG.furnSchrank, p, 0.22, 1.12); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var depth = Math.min(h, 28);  // visual depth below top surface
     _platShadow(ctx, x, y, w, depth);
@@ -1009,6 +1022,7 @@
 
   // Regal / Handtuchregal — wood plank with L-brackets; towel on Handtuchregal
   function _drawPlatRegal(ctx, p) {
+    if (imgReady(IMG.furnRegal)) { _drawFixtureSprite(ctx, IMG.furnRegal, p, 0.46, 1.10); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var plankH = Math.max(h, 10);
     var brW = 7, brH = Math.min(14, plankH + 8);
@@ -1073,6 +1087,7 @@
 
   // Waschbecken — white porcelain basin with small tap nub and inner shadow
   function _drawPlatWaschbecken(ctx, p) {
+    if (imgReady(IMG.furnWaschbecken)) { _drawFixtureSprite(ctx, IMG.furnWaschbecken, p, 0.36, 1.18); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var basinH = Math.max(h, 18);
 
@@ -1129,6 +1144,7 @@
 
   // Heizkörper — cream radiator panel with vertical fins
   function _drawPlatHeizkörper(ctx, p) {
+    if (imgReady(IMG.furnHeizkoerper)) { _drawFixtureSprite(ctx, IMG.furnHeizkoerper, p, 0.24, 1.08); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var panelH = Math.max(h, 14);
 
@@ -1173,6 +1189,7 @@
 
   // Hocker — seat slab with short legs
   function _drawPlatHocker(ctx, p) {
+    if (imgReady(IMG.furnHocker)) { _drawFixtureSprite(ctx, IMG.furnHocker, p, 0.34, 1.18); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var seatH = Math.max(h, 10);
     var legH  = Math.min(16, seatH);
@@ -1211,6 +1228,7 @@
 
   // Seife-platform — glossy blue soap bar on a small dish/ledge
   function _drawPlatSoap(ctx, p) {
+    if (imgReady(IMG.furnSeife)) { _drawFixtureSprite(ctx, IMG.furnSeife, p, 0.34, 1.30); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
 
     _platShadow(ctx, x, y, w, h);
@@ -1262,6 +1280,7 @@
 
   // Fallback shelf — clean wood plank + bracket + shadow
   function _drawPlatShelf(ctx, p) {
+    if (imgReady(IMG.furnRegal)) { _drawFixtureSprite(ctx, IMG.furnRegal, p, 0.46, 1.10); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var plankH = Math.max(h, 10);
 

@@ -27,13 +27,25 @@ function rrPath(ctx, x, y, w, h, r) {
 // Keys match the asset filenames; paths are lowercase relative with "./" prefix.
 // ---------------------------------------------------------------------------
 var IMG = {
-  titleHero:  new Image(),
-  bgBathroom: new Image(),
-  winSplash:  new Image()
+  titleHero:       new Image(),
+  bgBathroom:      new Image(),
+  winSplash:       new Image(),
+  furnSchrank:     new Image(),
+  furnRegal:       new Image(),
+  furnWaschbecken: new Image(),
+  furnHeizkoerper: new Image(),
+  furnHocker:      new Image(),
+  furnSeife:       new Image()
 };
-IMG.titleHero.src  = "./assets/title-hero.png";
-IMG.bgBathroom.src = "./assets/bg-bathroom.png";
-IMG.winSplash.src  = "./assets/win-splash.png";
+IMG.titleHero.src       = "./assets/title-hero.png";
+IMG.bgBathroom.src      = "./assets/bg-bathroom.png";
+IMG.winSplash.src       = "./assets/win-splash.png";
+IMG.furnSchrank.src     = "./assets/schrank.png";
+IMG.furnRegal.src       = "./assets/handtuchregal.png";
+IMG.furnWaschbecken.src = "./assets/waschbecken.png";
+IMG.furnHeizkoerper.src = "./assets/heizkoerper.png";
+IMG.furnHocker.src      = "./assets/hocker.png";
+IMG.furnSeife.src       = "./assets/seife.png";
 
 // Returns true only when an Image element has fully decoded pixel data available.
 function imgReady(img) {
