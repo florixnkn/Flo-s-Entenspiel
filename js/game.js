@@ -634,6 +634,23 @@
   function drawTitleHero(ctx, x, y, w, h) {
     ctx.save();
 
+    // --- Real image fast-path ---
+    if (imgReady(IMG.titleHero)) {
+      // Clip to rounded-rect slot so the image stays within the frame
+      rrPath(ctx, x, y, w, h, 12);
+      ctx.clip();
+      drawImageCover(ctx, IMG.titleHero, x, y, w, h);
+      ctx.restore();
+      // Stroke the border frame on top (outside the clip save/restore)
+      ctx.save();
+      ctx.strokeStyle = "#4488bb";
+      ctx.lineWidth   = 3;
+      rrPath(ctx, x, y, w, h, 12);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
     // Placeholder: dark-blue framed rect with rubber-duck scene hint
     ctx.fillStyle = "#1a2a4a";
     rrPath(ctx, x, y, w, h, 12);
@@ -1055,8 +1072,14 @@
   // ---------------------------------------------------------------------------
   function _drawAllclearOverlay(ctx, totalBonusTime, levelCount, isNewBest) {
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,50,0.7)";
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    if (imgReady(IMG.winSplash)) {
+      drawImageCover(ctx, IMG.winSplash, 0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillStyle = "rgba(0,0,40,0.45)";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    } else {
+      ctx.fillStyle = "rgba(0,0,50,0.7)";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    }
 
     var bw = 560, bh = 290;
     var bx = (CANVAS_W - bw) / 2;

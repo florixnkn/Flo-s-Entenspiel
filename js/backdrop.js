@@ -7,6 +7,12 @@
 // Called once per draw frame from game.js BEFORE platforms/duck/props are drawn.
 
 function drawBackdrop(ctx) {
+  // --- Real image fast-path ---
+  if (imgReady(IMG.bgBathroom)) {
+    drawImageCover(ctx, IMG.bgBathroom, 0, 0, CANVAS_W, CANVAS_H);
+    return;
+  }
+
   // --- Sky/wall base ---
   // Already cleared to PAL.sky (#d6f0ff) by game.js; paint a slightly warmer
   // wall colour on top so the tile grid stands out without competing with game objects.

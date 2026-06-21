@@ -22,6 +22,39 @@ function rrPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// ---------------------------------------------------------------------------
+// Image registry — eagerly loaded so all scripts can reference IMG.*
+// Keys match the asset filenames; paths are lowercase relative with "./" prefix.
+// ---------------------------------------------------------------------------
+var IMG = {
+  titleHero:  new Image(),
+  bgBathroom: new Image(),
+  winSplash:  new Image()
+};
+IMG.titleHero.src  = "./assets/title-hero.png";
+IMG.bgBathroom.src = "./assets/bg-bathroom.png";
+IMG.winSplash.src  = "./assets/win-splash.png";
+
+// Returns true only when an Image element has fully decoded pixel data available.
+function imgReady(img) {
+  return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+// object-fit:cover — scales src so it fully covers (dx,dy,dw,dh), centre-crops
+// the overflow, then draws via the 9-arg form of drawImage.
+function drawImageCover(ctx, img, dx, dy, dw, dh) {
+  var sw = img.naturalWidth;
+  var sh = img.naturalHeight;
+  var scale = Math.max(dw / sw, dh / sh);
+  var scaledW = sw * scale;
+  var scaledH = sh * scale;
+  var sx = (sw - dw / scale) / 2;
+  var sy = (sh - dh / scale) / 2;
+  var srcW = dw / scale;
+  var srcH = dh / scale;
+  ctx.drawImage(img, sx, sy, srcW, srcH, dx, dy, dw, dh);
+}
+
 // --- Physics ---
 var GRAVITY        = 2200;   // px/s² downward acceleration
 var GROUND_FRICTION = 0.80;  // vx multiplier on land (lower = more brake)
