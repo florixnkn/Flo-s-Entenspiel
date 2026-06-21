@@ -209,6 +209,19 @@ function _duckAnimUpdate(duck, dt) {
 
 // timeLeft is optional — when < 5 the duck's eyes widen to mirror clock urgency.
 function duckDraw(ctx, duck, timeLeft) {
+  // Soft contact shadow — drawn in world space before the body transform so it
+  // stays flat on the ground regardless of squash/stretch rotation.
+  ctx.save();
+  var r = duck.radius;
+  var shadowAlpha = 0.22;  // always draw; subtle enough not to distract mid-air
+  ctx.globalAlpha = shadowAlpha;
+  ctx.fillStyle   = "#221100";
+  ctx.beginPath();
+  ctx.ellipse(duck.x, duck.y + r * 0.92, r * 0.72, r * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
   ctx.save();
   ctx.translate(duck.x, duck.y);
 
@@ -222,11 +235,6 @@ function duckDraw(ctx, duck, timeLeft) {
   }
   ctx.rotate(drawAngle);
   ctx.scale(duck.scaleX * duck.facing, duck.scaleY);
-
-  var r = duck.radius;
-
-  // Shadow (only when near ground)
-  // (skipped for Slice 1 — keep it minimal)
 
   // --- Body ---
   ctx.beginPath();

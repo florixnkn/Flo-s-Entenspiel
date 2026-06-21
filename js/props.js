@@ -225,42 +225,62 @@ function propsDraw(ctx, props, totalTime) {
 }
 
 // ---------------------------------------------------------------------------
-// Toilet — white porcelain with tank + bowl
+// Toilet — white porcelain with tank + bowl; soft contact shadow, no debug text
 // ---------------------------------------------------------------------------
 function _drawPropToilet(ctx, p) {
   var x = p.x, y = p.y, w = p.w, h = p.h;
   ctx.save();
 
+  // Soft contact shadow under the base
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle   = "#221100";
+  rrPath(ctx, x + 3, y + h + 1, w, 8, 5);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
   // Tank
   ctx.fillStyle   = "#e8eef2";
   rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
   ctx.fill();
+  // Tank highlight
+  ctx.fillStyle   = "#ffffff";
+  ctx.globalAlpha = 0.5;
+  rrPath(ctx, x + w * 0.18, y + 2, w * 0.5, h * 0.12, 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = "#8899aa";
   ctx.lineWidth   = 2;
   rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
   ctx.stroke();
 
   // Bowl
-  ctx.fillStyle = "#d8e8f0";
+  ctx.fillStyle = "#eef4f8";
   rrPath(ctx, x, y + h * 0.42, w, h * 0.58, 8);
   ctx.fill();
-  ctx.strokeStyle = "#8899aa";
+  // Bowl side highlight
+  ctx.fillStyle   = "#ffffff";
+  ctx.globalAlpha = 0.45;
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.22, y + h * 0.62, w * 0.08, h * 0.14, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = PAL.outline;
   ctx.lineWidth   = 2;
   rrPath(ctx, x, y + h * 0.42, w, h * 0.58, 8);
   ctx.stroke();
 
-  // Water
+  // Water in bowl
   ctx.fillStyle   = "#b8d8f0";
   ctx.globalAlpha = 0.7;
   rrPath(ctx, x + 6, y + h * 0.55, w - 12, h * 0.32, 6);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle    = "#445566";
-  ctx.font         = "bold 9px system-ui, sans-serif";
-  ctx.textAlign    = "center";
-  ctx.textBaseline = "top";
-  ctx.fillText("WC", x + w / 2, y + h + 2);
+  // Tank outline with darker stroke for polish
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 2;
+  rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
+  ctx.stroke();
 
   ctx.restore();
 }
@@ -308,12 +328,6 @@ function _drawPropFaucet(ctx, p, totalTime) {
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle    = "#334455";
-  ctx.font         = "bold 8px system-ui, sans-serif";
-  ctx.textAlign    = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText("Hahn", x + w / 2, y - 1);
-
   ctx.restore();
 }
 
@@ -354,12 +368,6 @@ function _drawPropTrampoline(ctx, p) {
   ctx.lineWidth   = 2.5;
   rrPath(ctx, x, y, w, h, 6);
   ctx.stroke();
-
-  ctx.fillStyle    = "#ffffff";
-  ctx.font         = "bold 8px system-ui, sans-serif";
-  ctx.textAlign    = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Matte", x + w / 2, y + h / 2);
 
   ctx.restore();
 }
@@ -443,13 +451,21 @@ function _drawPropWind(ctx, p, totalTime) {
 }
 
 // ---------------------------------------------------------------------------
-// Cat — simple cartoon cat shape patrolling its axis
+// Cat — simple cartoon cat shape patrolling its axis; soft contact shadow added
 // ---------------------------------------------------------------------------
 function _drawPropCat(ctx, p) {
   var x = p.x, y = p.y, w = p.w, h = p.h;
   var cx2 = x + w / 2;
   var cy2 = y + h / 2;
   ctx.save();
+
+  // Soft contact shadow under the cat body
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle   = "#221100";
+  ctx.beginPath();
+  ctx.ellipse(cx2, y + h + 3, w * 0.42, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
 
   // Body
   ctx.fillStyle   = "#ff8833";

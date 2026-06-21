@@ -888,8 +888,9 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Platform renderer — cartoon rounded rects with label.
-  // Soap platforms get an extra shiny blue tint overlay.
+  // Platform renderer — per-fixture cartoon shapes dispatched by label.
+  // Top visual edge always matches p.y (collision-safe); fixtures may extend
+  // below p.y+p.h for cosmetic depth.  No debug text labels drawn.
   // ---------------------------------------------------------------------------
   function drawPlatforms(ctx, platforms) {
     for (var i = 0; i < platforms.length; i++) {
@@ -898,90 +899,479 @@
       // Skip prop-platforms (faucet/trampoline) — propsDraw handles those
       if (p.type === "faucet" || p.type === "trampoline") continue;
 
-      var isFloor = (p.label === "");
       ctx.save();
 
-      if (isFloor) {
-        ctx.fillStyle   = PAL.ground;
-        rrPath(ctx, p.x, p.y, p.w, p.h, 4);
+      if (p.label === "") {
+        // Floor safety-net — subtle tiled strip; backdrop already shows the floor
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle   = "#c4a882";
+        rrPath(ctx, p.x, p.y, p.w, p.h, 3);
         ctx.fill();
-        ctx.strokeStyle = PAL.outline;
-        ctx.lineWidth   = 1.5;
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = "#8a6a40";
+        ctx.lineWidth   = 1;
         ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (p.surface === "soap") {
+        _drawPlatSoap(ctx, p);
+      } else if (p.label === "Schrank") {
+        _drawPlatSchrank(ctx, p);
+      } else if (p.label === "Regal" || p.label === "Handtuchregal") {
+        _drawPlatRegal(ctx, p);
+      } else if (p.label === "Waschbecken") {
+        _drawPlatWaschbecken(ctx, p);
+      } else if (p.label === "Heizkörper") {
+        _drawPlatHeizkörper(ctx, p);
+      } else if (p.label === "Hocker") {
+        _drawPlatHocker(ctx, p);
       } else {
-        var isSoap = (p.surface === "soap");
-
-        ctx.fillStyle = isSoap ? "#99ccee" : "#c8a878";
-        rrPath(ctx, p.x, p.y, p.w, p.h, 6);
-        ctx.fill();
-
-        // Top stripe
-        ctx.fillStyle = isSoap ? "#bbddff" : "#dbbe94";
-        rrPath(ctx, p.x, p.y, p.w, 6, 4);
-        ctx.fill();
-
-        if (isSoap) {
-          // Shiny specular streak
-          ctx.fillStyle   = "#ffffff";
-          ctx.globalAlpha = 0.5;
-          rrPath(ctx, p.x + 4, p.y + 2, p.w - 8, 4, 2);
-          ctx.fill();
-          ctx.globalAlpha = 1;
-        }
-
-        ctx.strokeStyle = isSoap ? "#3366cc" : PAL.outline;
-        ctx.lineWidth   = 2.5;
-        rrPath(ctx, p.x, p.y, p.w, p.h, 6);
-        ctx.stroke();
-
-        if (p.label) {
-          ctx.fillStyle    = isSoap ? "#003388" : PAL.outline;
-          ctx.font         = "bold 10px system-ui, sans-serif";
-          ctx.textAlign    = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(p.label, p.x + p.w / 2, p.y + p.h / 2);
-        }
+        // Fallback: clean wood shelf with bracket + shadow
+        _drawPlatShelf(ctx, p);
       }
 
       ctx.restore();
     }
   }
 
+  // --- soft contact shadow helper (drawn BEFORE the fixture fill) ---
+  function _platShadow(ctx, x, y, w, h) {
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle   = "#221100";
+    rrPath(ctx, x + 3, y + 4, w, h, 8);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // Schrank — wooden cabinet with two door panels and round knobs
+  function _drawPlatSchrank(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+    var depth = Math.min(h, 28);  // visual depth below top surface
+    _platShadow(ctx, x, y, w, depth);
+
+    // Cabinet body (extends down to give depth)
+    ctx.fillStyle = "#c8a878";
+    rrPath(ctx, x, y, w, depth, 4);
+    ctx.fill();
+
+    // Wood grain — darker frame inside
+    ctx.fillStyle = "#b5905a";
+    ctx.fillRect(x + 3, y + 3, w - 6, depth - 6);
+
+    // Two door panels
+    var pw2 = (w - 9) / 2;
+    ctx.fillStyle = "#d4aa7a";
+    rrPath(ctx, x + 3, y + 3, pw2, depth - 6, 3);
+    ctx.fill();
+    rrPath(ctx, x + 6 + pw2, y + 3, pw2, depth - 6, 3);
+    ctx.fill();
+
+    // Door panel inner inset lines
+    ctx.strokeStyle = "#b07840";
+    ctx.lineWidth   = 1;
+    rrPath(ctx, x + 5, y + 5, pw2 - 4, depth - 10, 2);
+    ctx.stroke();
+    rrPath(ctx, x + 8 + pw2, y + 5, pw2 - 4, depth - 10, 2);
+    ctx.stroke();
+
+    // Round knobs
+    var kY = y + depth / 2;
+    ctx.fillStyle   = "#e8c88a";
+    ctx.strokeStyle = "#886622";
+    ctx.lineWidth   = 1.2;
+    [x + 3 + pw2 - 6, x + 6 + pw2 + pw2 - 6].forEach(function(kx) {
+      ctx.beginPath();
+      ctx.arc(kx, kY, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Outline
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, x, y, w, depth, 4);
+    ctx.stroke();
+  }
+
+  // Regal / Handtuchregal — wood plank with L-brackets; towel on Handtuchregal
+  function _drawPlatRegal(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+    var plankH = Math.max(h, 10);
+    var brW = 7, brH = Math.min(14, plankH + 8);
+
+    _platShadow(ctx, x, y, w, plankH);
+
+    // Plank top surface
+    ctx.fillStyle = "#c8a878";
+    rrPath(ctx, x, y, w, plankH, 4);
+    ctx.fill();
+
+    // Wood grain highlight
+    ctx.fillStyle   = "#dbbe94";
+    ctx.globalAlpha = 0.7;
+    rrPath(ctx, x + 3, y + 2, w - 6, plankH * 0.45, 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // L-brackets beneath (two, near edges)
+    ctx.fillStyle   = "#7a8a96";
+    ctx.strokeStyle = "#445566";
+    ctx.lineWidth   = 1.2;
+    var bPositions = [x + 8, x + w - 8 - brW];
+    for (var bi = 0; bi < bPositions.length; bi++) {
+      var bx = bPositions[bi];
+      // vertical arm
+      ctx.fillRect(bx, y + plankH, brW, brH);
+      // horizontal arm
+      ctx.fillRect(bx, y + plankH + brH - brW, brW + 6, brW);
+      ctx.strokeRect(bx, y + plankH, brW, brH);
+    }
+
+    // Outline on plank
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, x, y, w, plankH, 4);
+    ctx.stroke();
+
+    // Towel on Handtuchregal — folded soft-blue rectangle on top of plank
+    if (p.label === "Handtuchregal") {
+      var tw2 = Math.min(w * 0.55, 44);
+      var tx2 = x + (w - tw2) / 2;
+      var th2 = 8;
+      var ty2 = y - th2;  // sits on top surface (p.y)
+      ctx.fillStyle = "#7ecaea";
+      rrPath(ctx, tx2, ty2, tw2, th2, 3);
+      ctx.fill();
+      // Towel fold line
+      ctx.strokeStyle = "#55aabb";
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo(tx2 + 4, ty2 + th2 / 2);
+      ctx.lineTo(tx2 + tw2 - 4, ty2 + th2 / 2);
+      ctx.stroke();
+      // Towel outline
+      ctx.strokeStyle = "#3388aa";
+      ctx.lineWidth   = 1.5;
+      rrPath(ctx, tx2, ty2, tw2, th2, 3);
+      ctx.stroke();
+    }
+  }
+
+  // Waschbecken — white porcelain basin with small tap nub and inner shadow
+  function _drawPlatWaschbecken(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+    var basinH = Math.max(h, 18);
+
+    _platShadow(ctx, x, y, w, basinH);
+
+    // Basin outer body — porcelain white
+    ctx.fillStyle = "#eef4f8";
+    rrPath(ctx, x, y, w, basinH, 8);
+    ctx.fill();
+
+    // Inner basin bowl — soft blue shadow
+    var inset = 6;
+    ctx.fillStyle   = "#c4dcea";
+    ctx.globalAlpha = 0.75;
+    rrPath(ctx, x + inset, y + inset, w - inset * 2, basinH - inset, 5);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Rim highlight
+    ctx.fillStyle   = "#ffffff";
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 3);
+    ctx.lineTo(x + w - 10, y + 3);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Small tap nub at back-centre (top edge)
+    var tapX = x + w / 2 - 5;
+    ctx.fillStyle   = "#aabbcc";
+    ctx.strokeStyle = "#556677";
+    ctx.lineWidth   = 1.5;
+    ctx.fillRect(tapX, y - 7, 10, 8);
+    ctx.strokeRect(tapX, y - 7, 10, 8);
+    // Tap handle bar
+    ctx.fillStyle = "#99aabb";
+    ctx.fillRect(tapX - 4, y - 8, 18, 3);
+    ctx.strokeRect(tapX - 4, y - 8, 18, 3);
+
+    // Drain dot
+    ctx.fillStyle = "#88aabb";
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + basinH - 5, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outline
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, x, y, w, basinH, 8);
+    ctx.stroke();
+  }
+
+  // Heizkörper — cream radiator panel with vertical fins
+  function _drawPlatHeizkörper(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+    var panelH = Math.max(h, 14);
+
+    _platShadow(ctx, x, y, w, panelH);
+
+    // Radiator body
+    ctx.fillStyle = "#eceae0";
+    rrPath(ctx, x, y, w, panelH, 4);
+    ctx.fill();
+
+    // Vertical fins
+    var finCount = Math.max(3, Math.floor(w / 14));
+    var finSpacing = w / (finCount + 1);
+    ctx.strokeStyle = "#c8c4b0";
+    ctx.lineWidth   = 2;
+    for (var fi = 1; fi <= finCount; fi++) {
+      var fx = x + fi * finSpacing;
+      ctx.beginPath();
+      ctx.moveTo(fx, y + 2);
+      ctx.lineTo(fx, y + panelH - 2);
+      ctx.stroke();
+    }
+
+    // Top highlight stripe
+    ctx.fillStyle   = "#ffffff";
+    ctx.globalAlpha = 0.45;
+    rrPath(ctx, x + 3, y + 2, w - 6, 4, 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Wall bracket hints — small darker rects at left+right
+    ctx.fillStyle = "#b8b4a0";
+    ctx.fillRect(x, y + panelH, 6, 5);
+    ctx.fillRect(x + w - 6, y + panelH, 6, 5);
+
+    // Outline
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, x, y, w, panelH, 4);
+    ctx.stroke();
+  }
+
+  // Hocker — seat slab with short legs
+  function _drawPlatHocker(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+    var seatH = Math.max(h, 10);
+    var legH  = Math.min(16, seatH);
+    var legW  = 6;
+
+    _platShadow(ctx, x, y, w, seatH + legH);
+
+    // Legs — 3 legs for cartoon look
+    ctx.fillStyle   = "#b09060";
+    ctx.strokeStyle = "#7a5c30";
+    ctx.lineWidth   = 1.5;
+    var lPositions = [x + legW, x + w / 2 - legW / 2, x + w - legW * 2];
+    for (var li = 0; li < lPositions.length; li++) {
+      ctx.fillRect(lPositions[li], y + seatH, legW, legH);
+      ctx.strokeRect(lPositions[li], y + seatH, legW, legH);
+    }
+
+    // Seat slab
+    ctx.fillStyle = "#c8a878";
+    rrPath(ctx, x, y, w, seatH, 5);
+    ctx.fill();
+
+    // Seat top highlight
+    ctx.fillStyle   = "#dbbe94";
+    ctx.globalAlpha = 0.7;
+    rrPath(ctx, x + 3, y + 2, w - 6, seatH * 0.4, 3);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Outline
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, x, y, w, seatH, 5);
+    ctx.stroke();
+  }
+
+  // Seife-platform — glossy blue soap bar on a small dish/ledge
+  function _drawPlatSoap(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+
+    _platShadow(ctx, x, y, w, h);
+
+    // Dish/ledge base (ceramic white)
+    ctx.fillStyle = "#e8f0f4";
+    rrPath(ctx, x, y + h * 0.55, w, h * 0.45 + 3, 4);
+    ctx.fill();
+    ctx.strokeStyle = "#aabbcc";
+    ctx.lineWidth   = 1.5;
+    rrPath(ctx, x, y + h * 0.55, w, h * 0.45 + 3, 4);
+    ctx.stroke();
+
+    // Soap bar — glossy blue, sits ON the dish so its bottom is at p.y+h*0.55
+    var sw2 = w * 0.7, sh2 = h * 0.7;
+    var sx2 = x + (w - sw2) / 2, sy2 = y;
+    ctx.fillStyle = "#3377dd";
+    rrPath(ctx, sx2, sy2, sw2, sh2, 5);
+    ctx.fill();
+
+    // Soap gloss streaks
+    ctx.fillStyle   = "#ffffff";
+    ctx.globalAlpha = 0.55;
+    rrPath(ctx, sx2 + 4, sy2 + 3, sw2 * 0.5, 4, 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.25;
+    rrPath(ctx, sx2 + 4, sy2 + 9, sw2 * 0.35, 3, 1);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Specular dot (bright highlight)
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(sx2 + 6, sy2 + 5, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Soap outline
+    ctx.strokeStyle = "#1144aa";
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, sx2, sy2, sw2, sh2, 5);
+    ctx.stroke();
+
+    // Dish outline
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2;
+    rrPath(ctx, x, y + h * 0.55, w, h * 0.45 + 3, 4);
+    ctx.stroke();
+  }
+
+  // Fallback shelf — clean wood plank + bracket + shadow
+  function _drawPlatShelf(ctx, p) {
+    var x = p.x, y = p.y, w = p.w, h = p.h;
+    var plankH = Math.max(h, 10);
+
+    _platShadow(ctx, x, y, w, plankH);
+
+    ctx.fillStyle = "#c8a878";
+    rrPath(ctx, x, y, w, plankH, 4);
+    ctx.fill();
+
+    ctx.fillStyle   = "#dbbe94";
+    ctx.globalAlpha = 0.7;
+    rrPath(ctx, x + 3, y + 2, w - 6, plankH * 0.4, 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Single centre bracket
+    ctx.fillStyle   = "#7a8a96";
+    ctx.strokeStyle = "#445566";
+    ctx.lineWidth   = 1.2;
+    var bx = x + w / 2 - 4;
+    ctx.fillRect(bx, y + plankH, 8, 10);
+    ctx.fillRect(bx - 4, y + plankH + 6, 16, 5);
+    ctx.strokeRect(bx, y + plankH, 8, 10);
+
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 2.5;
+    rrPath(ctx, x, y, w, plankH, 4);
+    ctx.stroke();
+  }
+
   // ---------------------------------------------------------------------------
-  // Tub renderer
+  // Tub renderer — cartoon bathtub: porcelain body, water fill, foam bubbles,
+  // rim highlight, rounded feet, soft contact shadow.  No "Wanne" text.
   // ---------------------------------------------------------------------------
   function drawTub(ctx, tub) {
     if (!tub) return;
     var tx = tub.x, ty = tub.y, tw = tub.w, th = tub.h;
     ctx.save();
 
-    ctx.fillStyle = "#b8e8f8";
-    rrPath(ctx, tx, ty, tw, th, 12);
+    // Soft contact shadow beneath the whole tub
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle   = "#221100";
+    rrPath(ctx, tx + 5, ty + th + 2, tw, 10, 6);
     ctx.fill();
-
-    ctx.fillStyle = "#d4f0fc";
-    rrPath(ctx, tx + 6, ty + 6, tw - 12, th * 0.45, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = PAL.outline;
-    ctx.lineWidth   = 3;
-    rrPath(ctx, tx, ty, tw, th, 12);
-    ctx.stroke();
-
-    ctx.strokeStyle  = "#ffffff";
-    ctx.lineWidth    = 2;
-    ctx.globalAlpha  = 0.55;
-    ctx.beginPath();
-    ctx.moveTo(tx + 14, ty + 4);
-    ctx.lineTo(tx + tw - 14, ty + 4);
-    ctx.stroke();
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle    = "#1155aa";
-    ctx.font         = "bold 12px system-ui, sans-serif";
-    ctx.textAlign    = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Wanne", tx + tw / 2, ty + th / 2);
+    // Rounded feet — four small blobs below the tub body
+    var footR = 5;
+    var footY  = ty + th - footR + 8;
+    ctx.fillStyle   = "#d8e8ee";
+    ctx.strokeStyle = "#8899aa";
+    ctx.lineWidth   = 1.5;
+    [tx + 12, tx + tw - 12].forEach(function(fx) {
+      ctx.beginPath();
+      ctx.ellipse(fx, footY, footR * 1.4, footR, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Tub outer body — porcelain white
+    ctx.fillStyle = "#eef4f8";
+    rrPath(ctx, tx, ty, tw, th, 14);
+    ctx.fill();
+
+    // Water fill inside — soft blue, occupies upper ~60% of interior
+    var waterY  = ty + th * 0.38;
+    var waterH  = th * 0.52;
+    var waterIn = 8;
+    ctx.fillStyle   = "#7ecaea";
+    ctx.globalAlpha = 0.82;
+    rrPath(ctx, tx + waterIn, waterY, tw - waterIn * 2, waterH, 6);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Water surface shimmer — wavy lighter band
+    ctx.fillStyle   = "#aee6f8";
+    ctx.globalAlpha = 0.6;
+    rrPath(ctx, tx + waterIn + 4, waterY + 2, tw - waterIn * 2 - 8, 6, 3);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Foam bubbles — a few small white circles near the water surface
+    ctx.fillStyle   = "#ffffff";
+    ctx.globalAlpha = 0.80;
+    var bubbles = [
+      {bx: tx + tw * 0.25, by: waterY + 8,  br: 4},
+      {bx: tx + tw * 0.42, by: waterY + 5,  br: 3},
+      {bx: tx + tw * 0.60, by: waterY + 10, br: 5},
+      {bx: tx + tw * 0.75, by: waterY + 6,  br: 3}
+    ];
+    for (var bi = 0; bi < bubbles.length; bi++) {
+      var b = bubbles[bi];
+      ctx.beginPath();
+      ctx.arc(b.bx, b.by, b.br, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Rim highlight — bright top edge to look like porcelain lip
+    ctx.fillStyle   = "#ffffff";
+    ctx.globalAlpha = 0.65;
+    rrPath(ctx, tx + 6, ty + 4, tw - 12, 7, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Subtle sparkle on water — small star-like gleam (goal cue)
+    var sparkX = tx + tw * 0.78, sparkY = waterY + 14;
+    ctx.fillStyle   = "#ffffff";
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(sparkX, sparkY, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.arc(sparkX + 6, sparkY - 5, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Tub outline
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth   = 3;
+    rrPath(ctx, tx, ty, tw, th, 14);
+    ctx.stroke();
 
     ctx.restore();
   }
