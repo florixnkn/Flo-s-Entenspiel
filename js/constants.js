@@ -61,7 +61,11 @@ var GROUND_FRICTION = 0.80;  // vx multiplier on land (lower = more brake)
 var SOAP_FRICTION   = 0.98;  // vx multiplier on soap surface (near-frictionless)
 
 // --- Launch ---
-var LAUNCH_ANGLE   = 60;     // degrees above horizontal
+var LAUNCH_ANGLE     = 60;   // degrees above horizontal (kept for reference; launch now uses duck.aimAngle)
+var AIM_ANGLE_MIN    = 25;   // degrees — shallowest allowed aim
+var AIM_ANGLE_MAX    = 80;   // degrees — steepest allowed aim
+var AIM_ANGLE_DEFAULT = 60;  // matches old fixed feel
+var AIM_RATE_DEG     = 70;   // degrees/second while ↑ or ↓ held
 var MIN_LAUNCH     = 500;    // px/s at power=0
 var MAX_LAUNCH     = 1150;   // px/s at power=1
 

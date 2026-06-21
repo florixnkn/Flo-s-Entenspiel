@@ -562,7 +562,7 @@
     // Controls summary
     ctx.fillStyle = "#334455";
     ctx.font      = "12px system-ui, sans-serif";
-    ctx.fillText("SPACE halten = laden  ·  ←/→ = Richtung  ·  loslassen = Sprung  ·  R = neu  ·  M = Ton", CANVAS_W / 2, by + 96);
+    ctx.fillText("SPACE halten = laden  ·  ←/→ = Richtung  ·  ↑/↓ = Winkel  ·  loslassen = Sprung  ·  R = neu  ·  M = Ton", CANVAS_W / 2, by + 96);
 
     // Divider
     ctx.strokeStyle = "#ddc880";
@@ -1126,12 +1126,12 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Aim indicator
+  // Aim indicator — arrow at duck.aimAngle + dotted trajectory preview
   // ---------------------------------------------------------------------------
   function drawAimIndicator(ctx, duck) {
     if (!duck.onGround && !duck.charging) return;
 
-    var angleRad = LAUNCH_ANGLE * (Math.PI / 180);
+    var angleRad = duck.aimAngle * (Math.PI / 180);
     var arrowLen = 36 + duck.power * 22;
     var dx = Math.cos(angleRad) * arrowLen * duck.facing;
     var dy = -Math.sin(angleRad) * arrowLen;
@@ -1157,6 +1157,35 @@
     ctx.lineTo(ox + dx - headLen * Math.cos(headAngle + 0.42), oy + dy - headLen * Math.sin(headAngle + 0.42));
     ctx.closePath();
     ctx.fill();
+
+    // --- Dotted trajectory preview ---
+    // Simulate the same parabola as the real launch using local vars only.
+    // Speed mirrors _duckLaunch exactly; preview length pulses with power.
+    var simSpeed = MIN_LAUNCH + duck.power * (MAX_LAUNCH - MIN_LAUNCH);
+    var simVx    = Math.cos(angleRad) * simSpeed * duck.facing;
+    var simVy    = -Math.sin(angleRad) * simSpeed;
+    var simX     = duck.x;
+    var simY     = duck.y;
+    var simDt    = 1 / 60;
+
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle   = PAL.aimArrow;
+
+    for (var step = 0; step < 90; step++) {
+      simVy += GRAVITY * simDt;
+      simX  += simVx  * simDt;
+      simY  += simVy  * simDt;
+
+      // Stop if the simulated point leaves the canvas
+      if (simY > CANVAS_H || simX < 0 || simX > CANVAS_W) break;
+
+      // Draw a dot every 5th step
+      if (step % 5 === 4) {
+        ctx.beginPath();
+        ctx.arc(simX, simY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     ctx.restore();
   }
@@ -1222,7 +1251,7 @@
     ctx.textAlign    = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(
-      "SPACE halten = laden  ·  ←/→ = Richtung  ·  loslassen = Sprung  ·  R = Reset",
+      "SPACE halten = laden  ·  ←/→ = Richtung  ·  ↑/↓ = Winkel  ·  loslassen = Sprung  ·  R = Reset",
       CANVAS_W / 2,
       CANVAS_H - 6
     );

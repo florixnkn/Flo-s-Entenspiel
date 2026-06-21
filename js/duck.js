@@ -12,6 +12,7 @@ function createDuck(startX, startY) {
 
     onGround: false,
     facing:   1,          // 1 = right, -1 = left
+    aimAngle: AIM_ANGLE_DEFAULT,  // degrees above horizontal; adjustable with ↑/↓
 
     // Charge state
     charging: false,
@@ -40,6 +41,8 @@ function duckReset(duck, startX, startY) {
   duck.vx      = 0;
   duck.vy      = 0;
   duck.onGround = false;
+  duck.facing   = 1;
+  duck.aimAngle = AIM_ANGLE_DEFAULT;
   duck.charging = false;
   duck.power    = 0;
   duck.chargeT  = 0;
@@ -66,6 +69,15 @@ function duckUpdate(duck, dt, platforms) {
   if (!isStunned) {
     if (Input.held("ArrowLeft"))  duck.facing = -1;
     if (Input.held("ArrowRight")) duck.facing =  1;
+  }
+
+  // --- Aim angle: ↑/↓ while on ground (idle or charging), never affects facing ---
+  if (!isStunned && duck.onGround) {
+    if (Input.held("ArrowUp"))   duck.aimAngle += AIM_RATE_DEG * dt;
+    if (Input.held("ArrowDown")) duck.aimAngle -= AIM_RATE_DEG * dt;
+    // Clamp to allowed range
+    if (duck.aimAngle < AIM_ANGLE_MIN) duck.aimAngle = AIM_ANGLE_MIN;
+    if (duck.aimAngle > AIM_ANGLE_MAX) duck.aimAngle = AIM_ANGLE_MAX;
   }
 
   // --- Charge / Launch --- (blocked while stunned)
@@ -134,7 +146,7 @@ function duckUpdate(duck, dt, platforms) {
 function _duckLaunch(duck) {
   duck.charging  = false;
   var speed      = MIN_LAUNCH + duck.power * (MAX_LAUNCH - MIN_LAUNCH);
-  var angleRad   = LAUNCH_ANGLE * (Math.PI / 180);
+  var angleRad   = duck.aimAngle * (Math.PI / 180);  // player-chosen angle
   duck.vx        = Math.cos(angleRad) * speed * duck.facing;
   duck.vy        = -Math.sin(angleRad) * speed;   // negative = upward
   duck.onGround  = false;

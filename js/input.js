@@ -10,8 +10,9 @@ var Input = (function () {
       _pressed[e.code] = true;
     }
     _down[e.code] = true;
-    // Prevent page scroll on space/arrow keys
-    if (e.code === "Space" || e.code === "ArrowLeft" || e.code === "ArrowRight") {
+    // Prevent page scroll on space/arrow keys (↑/↓ are now aim controls too)
+    if (e.code === "Space" || e.code === "ArrowLeft" || e.code === "ArrowRight"
+        || e.code === "ArrowUp" || e.code === "ArrowDown") {
       e.preventDefault();
     }
   }
