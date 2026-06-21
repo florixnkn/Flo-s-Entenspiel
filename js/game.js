@@ -172,15 +172,14 @@
         g.bestTime   = bestTimeLoad();
         g._prevState = "LEVELSELECT";
       }
-      // Number keys 1/2/3 jump straight into a level
-      if (Input.pressed("Digit1")) {
-        g.allclearTime = 0; g.isNewBest = false; _startLevel(0);
+      // Number keys 1–9 jump to level index 0–8; 0 jumps to level index 9
+      for (var _d = 1; _d <= 9; _d++) {
+        if (Input.pressed("Digit" + _d) && (_d - 1) < LEVELS.length) {
+          g.allclearTime = 0; g.isNewBest = false; _startLevel(_d - 1);
+        }
       }
-      if (Input.pressed("Digit2")) {
-        g.allclearTime = 0; g.isNewBest = false; _startLevel(1);
-      }
-      if (Input.pressed("Digit3")) {
-        g.allclearTime = 0; g.isNewBest = false; _startLevel(2);
+      if (Input.pressed("Digit0") && LEVELS.length >= 10) {
+        g.allclearTime = 0; g.isNewBest = false; _startLevel(9);
       }
       // Esc / L return to title
       if (Input.pressed("Escape") || Input.pressed("KeyL")) {
@@ -744,32 +743,42 @@
 
     ctx.fillStyle = "rgba(180,210,255,0.70)";
     ctx.font      = "14px system-ui, sans-serif";
-    ctx.fillText("Klicken oder 1 / 2 / 3 drücken", CANVAS_W / 2, 80);
+    ctx.fillText("Klicken oder Zahltaste 1–9, 0 = Level 10", CANVAS_W / 2, 80);
 
-    // --- Level tiles ---
-    var tileW  = 240;
-    var tileH  = 200;
-    var tileGap = 36;
-    var totalW  = LEVELS.length * tileW + (LEVELS.length - 1) * tileGap;
-    var startX  = (CANVAS_W - totalW) / 2;
-    var tileY   = 120;
+    // --- Level tile grid ---
+    var cols   = Math.min(5, LEVELS.length);
+    var rows   = Math.ceil(LEVELS.length / cols);
+    var margin = 28;
+    var colGap = 16;
+    var rowGap = 18;
+    var tileW  = Math.floor((CANVAS_W - 2 * margin - (cols - 1) * colGap) / cols);
+    // Available vertical space: subtitle bottom ~95, back button (38px) + 22px gap above it
+    // leaves room from y=105 to y=(CANVAS_H - 38 - 22) = 540. Cap tileH at 150.
+    var availH = CANVAS_H - 105 - 38 - 22;
+    var tileH  = Math.min(150, Math.floor((availH - (rows - 1) * rowGap) / rows));
+    var gridH  = rows * tileH + (rows - 1) * rowGap;
+    var startX = margin;
+    var startY = 105 + Math.floor((availH - gridH) / 2);
 
     _levelTileRects = [];   // reset each frame so coords stay fresh
 
     for (var i = 0; i < LEVELS.length; i++) {
       var lvl  = LEVELS[i];
-      var tx   = startX + i * (tileW + tileGap);
+      var col  = i % cols;
+      var row  = Math.floor(i / cols);
+      var tx   = startX + col * (tileW + colGap);
+      var ty   = startY + row * (tileH + rowGap);
 
-      _levelTileRects.push({ x: tx, y: tileY, w: tileW, h: tileH, index: i });
+      _levelTileRects.push({ x: tx, y: ty, w: tileW, h: tileH, index: i });
 
       // Tile background
       var isHovered = (i === _hoveredTileIndex);
       ctx.fillStyle = isHovered ? "#264a72" : "#1e3a5a";
-      rrPath(ctx, tx, tileY, tileW, tileH, 14);
+      rrPath(ctx, tx, ty, tileW, tileH, 14);
       ctx.fill();
       ctx.strokeStyle = isHovered ? "#88ccff" : "#4488cc";
       ctx.lineWidth   = isHovered ? 4 : 3;
-      rrPath(ctx, tx, tileY, tileW, tileH, 14);
+      rrPath(ctx, tx, ty, tileW, tileH, 14);
       ctx.stroke();
 
       // Subtle inset glow on hover
@@ -777,49 +786,53 @@
         ctx.save();
         ctx.strokeStyle = "rgba(136,204,255,0.30)";
         ctx.lineWidth   = 8;
-        rrPath(ctx, tx + 4, tileY + 4, tileW - 8, tileH - 8, 11);
+        rrPath(ctx, tx + 4, ty + 4, tileW - 8, tileH - 8, 11);
         ctx.stroke();
         ctx.restore();
       }
 
-      // Level number badge
+      // Level number badge (smaller to fit reduced tile width)
+      var badgeSize = 34;
       ctx.fillStyle = "#4488cc";
-      rrPath(ctx, tx + 10, tileY + 10, 44, 44, 8);
+      rrPath(ctx, tx + 8, ty + 8, badgeSize, badgeSize, 7);
       ctx.fill();
       ctx.fillStyle    = "#ffffff";
-      ctx.font         = "bold 26px system-ui, sans-serif";
+      ctx.font         = "bold 20px system-ui, sans-serif";
       ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(i + 1), tx + 32, tileY + 32);
+      ctx.fillText(String(i + 1), tx + 8 + badgeSize / 2, ty + 8 + badgeSize / 2);
 
-      // Level name
+      // Level name — measure and shrink font if too wide
+      var nameY = ty + 52;
+      var maxNameW = tileW - 12;
       ctx.fillStyle    = "#e8f4ff";
-      ctx.font         = "bold 18px system-ui, sans-serif";
       ctx.textBaseline = "top";
-      ctx.fillText(lvl.name, tx + tileW / 2, tileY + 70);
+      var nameFontSize = 15;
+      ctx.font = "bold " + nameFontSize + "px system-ui, sans-serif";
+      if (ctx.measureText(lvl.name).width > maxNameW) {
+        nameFontSize = 12;
+        ctx.font = "bold " + nameFontSize + "px system-ui, sans-serif";
+      }
+      ctx.fillText(lvl.name, tx + tileW / 2, nameY);
 
       // Time limit info
       ctx.fillStyle = "#88aacc";
-      ctx.font      = "13px system-ui, sans-serif";
-      ctx.fillText("Zeit: " + lvl.timeLimit + " s", tx + tileW / 2, tileY + 104);
-
-      // Best time (shared localStorage value — whole-game best, not per-level)
-      // Per-level bests aren't tracked yet; show a dash until the system is extended.
-      ctx.fillStyle = "#aaccee";
       ctx.font      = "12px system-ui, sans-serif";
-      ctx.fillText("Beste: —", tx + tileW / 2, tileY + 130);
+      ctx.fillText("Zeit: " + lvl.timeLimit + " s", tx + tileW / 2, nameY + nameFontSize + 6);
 
       // Key hint at bottom of tile
+      var keyLabel = (i === 9) ? "0" : String(i + 1);
       ctx.fillStyle    = "rgba(100,160,220,0.65)";
-      ctx.font         = "bold 13px system-ui, sans-serif";
+      ctx.font         = "bold 12px system-ui, sans-serif";
       ctx.textBaseline = "bottom";
-      ctx.fillText("[" + (i + 1) + "]", tx + tileW / 2, tileY + tileH - 10);
+      ctx.fillText("[" + keyLabel + "]", tx + tileW / 2, ty + tileH - 8);
     }
 
-    // Back button
+    // Back button — positioned below the grid
+    var gridBottom = startY + gridH;
     var backW = 160, backH = 38;
     var backX = (CANVAS_W - backW) / 2;
-    var backY = tileY + tileH + 28;
+    var backY = gridBottom + 22;
 
     ctx.fillStyle = "rgba(40,60,100,0.85)";
     rrPath(ctx, backX, backY, backW, backH, 10);
