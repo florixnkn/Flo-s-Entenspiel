@@ -115,7 +115,7 @@ var LEVELS = [
     props: [
       { type: "toilet", x: 345, y: 300, w: 50, h: 45 },
       { type: "wind",   x: 330, y: 90,  w: 180, h: 380,
-        params: { fx: 320, fy: 0, period: 2.5 } },
+        params: { fx: 560, fy: 0, period: 2.5 } },
       { type: "cat",    x: 455, y: 227, w: 40,  h: 28,
         params: { axis: "x", range: 35, speed: 2.2 } }
     ]
@@ -147,7 +147,7 @@ var LEVELS = [
     props: [
       { type: "toilet", x: 470, y: 385, w: 50, h: 45 },
       { type: "wind",   x: 300, y: 120, w: 280, h: 330,
-        params: { fx: 220, fy: 0, period: 2.6 } }
+        params: { fx: 480, fy: 0, period: 2.6 } }
     ]
   },
 
@@ -233,11 +233,11 @@ var LEVELS = [
 
     props: [
       { type: "wind",   x: 180, y: 120, w: 140, h: 330,
-        params: { fx: 240, fy: 0, period: 2.4 } },
+        params: { fx: 520, fy: 0, period: 2.4 } },
       { type: "wind",   x: 400, y: 140, w: 150, h: 300,
-        params: { fx: -240, fy: 0, period: 2.2 } },
+        params: { fx: -520, fy: 0, period: 2.2 } },
       { type: "wind",   x: 600, y: 260, w: 140, h: 300,
-        params: { fx: 0, fy: -300, period: 2.0 } },
+        params: { fx: 0, fy: -700, period: 2.0 } },
       { type: "toilet", x: 430, y: 320, w: 50, h: 45 }
     ]
   },
@@ -300,7 +300,7 @@ var LEVELS = [
 
     props: [
       { type: "wind",   x: 320, y: 120, w: 320, h: 360,
-        params: { fx: 0, fy: 300, period: 2.4 } },
+        params: { fx: 0, fy: 620, period: 2.4 } },
       { type: "toilet", x: 480, y: 270, w: 50, h: 45 },
       { type: "toilet", x: 290, y: 375, w: 50, h: 45 }
     ]
@@ -334,7 +334,7 @@ var LEVELS = [
       { type: "faucet", x: 300, y: 330, w: 95, h: 16,
         params: { axis: "y", range: 110, speed: 1.3 } },
       { type: "wind",   x: 400, y: 150, w: 160, h: 320,
-        params: { fx: 280, fy: 0, period: 2.2 } },
+        params: { fx: 540, fy: 0, period: 2.2 } },
       { type: "cat",    x: 575, y: 272, w: 40,  h: 28,
         params: { axis: "x", range: 30, speed: 2.6 } },
       { type: "toilet", x: 140, y: 300, w: 50, h: 45 }
