@@ -99,8 +99,9 @@
     duck.stunTime = 0;
 
     // Begin with the level-intro beat — timer freezes until intro is done
+    var _legend = _levelItemLegend(g.level);
     g.state      = "LEVEL_INTRO";
-    g.introTimer = 1.2;   // seconds the banner stays visible
+    g.introTimer = 2.4 + _legend.length * 0.7;  // longer for more items to read
     g.introAlpha = 0;
     g._prevState = "LEVEL_INTRO";
   }
@@ -143,6 +144,14 @@
     // M key toggles mute from any state
     if (Input.pressed("KeyM")) {
       SFX.toggleMute();
+    }
+
+    // Esc returns to TITLE from any in-game state (LEVELSELECT has its own handler below)
+    if (Input.pressed("Escape") && g.state !== "TITLE" && g.state !== "LEVELSELECT") {
+      g.state      = "TITLE";
+      g._prevState = "";
+      g.allclearTime = 0;
+      return;
     }
 
     // --- TITLE screen ---
@@ -192,6 +201,14 @@
 
     // --- LEVEL_INTRO beat: show banner, freeze timer ---
     if (g.state === "LEVEL_INTRO") {
+      // Space skips the intro immediately
+      if (Input.pressed("Space")) {
+        g.state      = "PLAY";
+        g._prevState = "PLAY";
+        g.introAlpha = 0;
+        return;
+      }
+
       var FADE_SPEED = 4.0;  // alpha units per second
 
       if (g.introTimer > 0.15) {
@@ -426,8 +443,9 @@
       drawHint(ctx);
     }
 
-    // Mute button drawn on top of everything on in-game screens too
+    // Mute button + menu button drawn on top of everything on in-game screens too
     _drawMuteButton(ctx);
+    _drawMenuButton(ctx);
   }
 
   // ---------------------------------------------------------------------------
@@ -505,6 +523,37 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Menu button — "☰ Menü" top-left, shown only during in-game states.
+  // Clicking returns to TITLE. Position leaves room for the level badge at x=110.
+  // ---------------------------------------------------------------------------
+  var MENU_BTN = { x: 10, y: 8, w: 92, h: 30 };
+
+  // States where the menu button is shown
+  var _INGAME_STATES = {
+    "PLAY": true, "LEVEL_INTRO": true, "WIN_BEAT": true,
+    "LOSE_CHILD": true, "LOSE_TOILET": true, "ALLCLEAR": true
+  };
+
+  function _drawMenuButton(ctx) {
+    if (!_INGAME_STATES[g.state]) return;
+    ctx.save();
+    var r = MENU_BTN;
+    ctx.fillStyle = "rgba(15,25,50,0.55)";
+    rrPath(ctx, r.x, r.y, r.w, r.h, 8);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth   = 1.5;
+    rrPath(ctx, r.x, r.y, r.w, r.h, 8);
+    ctx.stroke();
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = "bold 13px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("☰ Menü", r.x + r.w / 2, r.y + r.h / 2);
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------------------
   // TITLE screen — hero image area + buttons + controls + best time
   // ---------------------------------------------------------------------------
   function _drawTitleScreen(ctx) {
@@ -517,23 +566,19 @@
     ctx.fillStyle = "rgba(10,20,40,0.45)";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // --- Hero image area (upper-centre, ~16:9 proportions) ---
-    // This function is the ONE place a real image will be swapped in.
-    // To use a real image later, load it once at startup and draw it here:
-    //   var _heroImg = new Image(); _heroImg.src = "./assets/title-hero.png";
-    //   then replace drawTitleHero's placeholder body with:
-    //   ctx.drawImage(_heroImg, x, y, w, h);
+    // --- Hero image area (reduced height to make room for the info card) ---
+    // To swap in a real image later: load IMG.titleHero and call drawTitleHero.
     var heroW = 540;
-    var heroH = Math.round(heroW * 9 / 16);   // 304 px — keeps 16:9
+    var heroH = 200;    // reduced from 304 so the card fits within 960×600
     var heroX = (CANVAS_W - heroW) / 2;
-    var heroY = 30;
+    var heroY = 18;
     drawTitleHero(ctx, heroX, heroY, heroW, heroH);
 
-    // --- Main card — sits below the hero area ---
-    var bw = 580;
-    var bh = 230;
+    // --- Main card — title + Anleitung + controls + best time + buttons ---
+    var bw = 620;
+    var bh = 310;
     var bx = (CANVAS_W - bw) / 2;
-    var by = heroY + heroH + 14;
+    var by = heroY + heroH + 10;   // 228 px from top
 
     ctx.fillStyle = "#fffde8";
     rrPath(ctx, bx, by, bw, bh, 22);
@@ -543,32 +588,45 @@
     rrPath(ctx, bx, by, bw, bh, 22);
     ctx.stroke();
 
-    // Title text
+    // Game title
     ctx.fillStyle    = "#cc6600";
-    ctx.font         = "bold 46px system-ui, sans-serif";
+    ctx.font         = "bold 38px system-ui, sans-serif";
     ctx.textAlign    = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Ab in die Wanne!", CANVAS_W / 2, by + 18);
+    ctx.fillText("Ab in die Wanne!", CANVAS_W / 2, by + 14);
 
-    // One-liner goal
+    // --- Anleitung block ---
+    var anlY = by + 62;   // top of the how-to section
+    ctx.fillStyle = "#553300";
+    ctx.font      = "bold 12px system-ui, sans-serif";
+    ctx.fillText("Anleitung:", CANVAS_W / 2, anlY);
+
     ctx.fillStyle = "#443322";
-    ctx.font      = "13px system-ui, sans-serif";
+    ctx.font      = "12px system-ui, sans-serif";
     ctx.fillText(
-      "Bring die Gummiente in die Wanne, bevor das Kind ins Bad kommt!",
-      CANVAS_W / 2, by + 72
+      "Ziel: Bring die Gummiente in die Wanne, bevor die Zeit abläuft und das Kind ins Bad kommt.",
+      CANVAS_W / 2, anlY + 18
+    );
+    ctx.fillText(
+      "Sprung: SPACE halten lädt die Kraft (sie pendelt) – loslassen springt.",
+      CANVAS_W / 2, anlY + 36
+    );
+    ctx.fillText(
+      "Zielen: ←/→ Richtung · ↑/↓ Winkel · die gepunktete Linie zeigt die Flugbahn.",
+      CANVAS_W / 2, anlY + 54
     );
 
-    // Controls summary
+    // Controls footer
     ctx.fillStyle = "#334455";
     ctx.font      = "12px system-ui, sans-serif";
-    ctx.fillText("SPACE halten = laden  ·  ←/→ = Richtung  ·  ↑/↓ = Winkel  ·  loslassen = Sprung  ·  R = neu  ·  M = Ton", CANVAS_W / 2, by + 96);
+    ctx.fillText("R = neu · M = Ton · Esc = Menü", CANVAS_W / 2, anlY + 76);
 
     // Divider
     ctx.strokeStyle = "#ddc880";
     ctx.lineWidth   = 1.5;
     ctx.beginPath();
-    ctx.moveTo(bx + 40, by + 116);
-    ctx.lineTo(bx + bw - 40, by + 116);
+    ctx.moveTo(bx + 40, anlY + 94);
+    ctx.lineTo(bx + bw - 40, anlY + 94);
     ctx.stroke();
 
     // Best time display (cached on TITLE entry — no per-frame localStorage read)
@@ -576,11 +634,11 @@
     if (best !== null && best !== undefined) {
       ctx.fillStyle = "#886600";
       ctx.font      = "13px system-ui, sans-serif";
-      ctx.fillText("Beste: " + Math.ceil(Math.max(0, best)) + " s Bonus", CANVAS_W / 2, by + 128);
+      ctx.fillText("Beste: " + Math.ceil(Math.max(0, best)) + " s Bonus", CANVAS_W / 2, anlY + 106);
     }
 
     // --- Two action buttons: START (Space) + LEVEL WÄHLEN (L) ---
-    var btnY   = by + 156;
+    var btnY   = anlY + 128;
     var btnH   = 40;
     var btnGap = 20;
     var btnW   = 210;
@@ -862,7 +920,55 @@
   var _hoveredTileIndex = -1;
 
   // ---------------------------------------------------------------------------
-  // Level-intro banner — fades in/out over 1.2 s, timer paused meanwhile
+  // _levelItemLegend(level) — returns an array of one-line hint strings,
+  // one per DISTINCT special element present in the level. Used both for
+  // the intro banner draw and to set introTimer in _startLevel.
+  // ---------------------------------------------------------------------------
+  function _levelItemLegend(level) {
+    if (!level) return [];
+    var lines = [];
+    var seen  = {};
+
+    // Check platforms for soap surface
+    var plats = level.platforms || [];
+    for (var pi = 0; pi < plats.length; pi++) {
+      if (plats[pi].surface === "soap" && !seen.soap) {
+        seen.soap = true;
+        lines.push("🧼 Seife: rutschig – schwer zu stoppen");
+      }
+    }
+
+    // Check props for special types
+    var props = level.props || [];
+    for (var qi = 0; qi < props.length; qi++) {
+      var p = props[qi];
+      if (p.type === "toilet" && !seen.toilet) {
+        seen.toilet = true;
+        lines.push("🚽 WC: nicht reinfallen!");
+      }
+      if (p.type === "faucet" && !seen.faucetY && p.params && p.params.axis === "y") {
+        seen.faucetY = true;
+        lines.push("🛗 Hahn: Fahrstuhl – trägt dich hoch/runter");
+      }
+      if (p.type === "faucet" && !seen.faucetX && p.params && p.params.axis !== "y") {
+        seen.faucetX = true;
+        lines.push("🚰 Hahn: bewegliche Plattform");
+      }
+      if (p.type === "wind" && !seen.wind) {
+        seen.wind = true;
+        lines.push("🌬️ Föhn: Windstoß im Takt (an/aus) – im richtigen Moment springen");
+      }
+      if (p.type === "cat" && !seen.cat) {
+        seen.cat = true;
+        lines.push("🐱 Katze: stößt dich weg (nicht tödlich)");
+      }
+    }
+
+    return lines;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Level-intro banner — fades in/out, timer set per legend length in _startLevel
   // ---------------------------------------------------------------------------
   function _drawLevelIntroBanner(ctx, levelIndex, alpha) {
     if (alpha <= 0) return;
@@ -870,14 +976,17 @@
     var lvl = LEVELS[levelIndex];
     if (!lvl) return;
 
+    var legend   = _levelItemLegend(lvl);
+    var lineH    = 20;                           // px per legend line
+    var baseH    = 120;                          // header + "Viel Erfolg!" area
+    var bh       = baseH + legend.length * lineH + 36;  // +36 for SPACE hint row
+    var bw       = 560;
+    var bx       = (CANVAS_W - bw) / 2;
+    // Centre vertically; slide in from above as alpha fades in
+    var by       = (CANVAS_H - bh) / 2 - (1 - alpha) * 40;
+
     ctx.save();
     ctx.globalAlpha = alpha;
-
-    // Horizontal banner across the centre
-    // Slide down into place as alpha fades in: offset shrinks from -40 to 0
-    var bw = 540, bh = 100;
-    var bx = (CANVAS_W - bw) / 2;
-    var by = (CANVAS_H - bh) / 2 - (1 - alpha) * 40;
 
     ctx.fillStyle = "#1a2a4a";
     rrPath(ctx, bx, by, bw, bh, 14);
@@ -887,15 +996,32 @@
     rrPath(ctx, bx, by, bw, bh, 14);
     ctx.stroke();
 
+    // Level title line
     ctx.fillStyle    = "#ffffff";
-    ctx.font         = "bold 32px system-ui, sans-serif";
+    ctx.font         = "bold 30px system-ui, sans-serif";
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("Level " + (levelIndex + 1) + " — " + lvl.name, CANVAS_W / 2, by + bh / 2 - 12);
+    ctx.fillText("Level " + (levelIndex + 1) + " — " + lvl.name, CANVAS_W / 2, by + 36);
 
+    // "Viel Erfolg!" sub-line
     ctx.font      = "14px system-ui, sans-serif";
     ctx.fillStyle = "#aaccee";
-    ctx.fillText("Viel Erfolg!", CANVAS_W / 2, by + bh / 2 + 22);
+    ctx.fillText("Viel Erfolg!", CANVAS_W / 2, by + 66);
+
+    // Legend lines (special items in this level)
+    if (legend.length > 0) {
+      var legendStartY = by + 92;
+      ctx.font      = "13px system-ui, sans-serif";
+      ctx.fillStyle = "#e8d870";
+      for (var li = 0; li < legend.length; li++) {
+        ctx.fillText(legend[li], CANVAS_W / 2, legendStartY + li * lineH);
+      }
+    }
+
+    // SPACE = Start hint at the bottom of the banner
+    ctx.font      = "bold 13px system-ui, sans-serif";
+    ctx.fillStyle = "rgba(180,220,255,0.80)";
+    ctx.fillText("▶ SPACE = Start", CANVAS_W / 2, by + bh - 18);
 
     ctx.restore();
   }
@@ -1728,13 +1854,13 @@
     if (!lvl) return;
     ctx.save();
     ctx.fillStyle    = "rgba(20,20,40,0.55)";
-    rrPath(ctx, 8, 6, 140, 32, 6);
+    rrPath(ctx, 110, 6, 140, 32, 6);
     ctx.fill();
     ctx.fillStyle    = "#ffffff";
     ctx.font         = "bold 11px system-ui, sans-serif";
     ctx.textAlign    = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("L" + (levelIndex + 1) + "/" + totalLevels + "  " + lvl.name, 16, 12);
+    ctx.fillText("L" + (levelIndex + 1) + "/" + totalLevels + "  " + lvl.name, 118, 12);
     ctx.restore();
   }
 
@@ -1774,6 +1900,14 @@
     var mdy = cy - MUTE_BTN.cy;
     if (Math.sqrt(mdx * mdx + mdy * mdy) <= MUTE_BTN.r) {
       SFX.toggleMute();
+      return;
+    }
+
+    // Menu button — in-game states only
+    if (_INGAME_STATES[g.state] && _hitRect(cx, cy, MENU_BTN)) {
+      g.state        = "TITLE";
+      g._prevState   = "";
+      g.allclearTime = 0;
       return;
     }
 
