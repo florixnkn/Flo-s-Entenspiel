@@ -290,80 +290,173 @@ function drawLoseToiletOverlay(ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// Simple cartoon crying-child figure (pure shapes, ~80px tall)
-// cx, cy = center of figure
+// Cute distressed cartoon toddler, ~95px tall, centered at (cx, cy).
+// Onesie body, stubby raised arms, closed crying eyes, wide wailing mouth,
+// big tear streams, rosy cheeks, hair tuft. Thick dark outlines.
 // ---------------------------------------------------------------------------
 function _drawCryingChild(ctx, cx, cy) {
   ctx.save();
 
-  // Body
-  ctx.fillStyle   = "#f5c842";
+  // Convenient vertical anchors (cy = vertical center of the figure)
+  var headCy  = cy - 28;   // center of head circle
+  var headR   = 18;        // head radius
+  var bodyTop = cy - 10;   // top of onesie body
+  var bodyH   = 34;        // onesie height
+  var bodyW   = 26;        // onesie half-width * 2
+
+  // --- Onesie body (light blue) ---
+  ctx.fillStyle   = "#9cc4e8";
   ctx.strokeStyle = "#333333";
   ctx.lineWidth   = 2;
-  ctx.beginPath();
-  ctx.roundRect
-    ? ctx.roundRect(cx - 14, cy - 16, 28, 36, 6)
-    : (function(){ rrPath(ctx, cx - 14, cy - 16, 28, 36, 6); })();
+  rrPath(ctx, cx - bodyW / 2, bodyTop, bodyW, bodyH, 8);
   ctx.fill();
   ctx.stroke();
 
-  // Head
-  ctx.fillStyle = "#fad98a";
-  ctx.beginPath();
-  ctx.arc(cx, cy - 32, 18, 0, Math.PI * 2);
+  // Onesie inner highlight — soft lighter stripe on left
+  ctx.save();
+  ctx.globalAlpha = 0.30;
+  ctx.fillStyle   = "#ffffff";
+  rrPath(ctx, cx - bodyW / 2 + 4, bodyTop + 4, 7, bodyH - 10, 3);
   ctx.fill();
+  ctx.restore();
+
+  // --- Stubby legs ---
+  var legW = 9, legH = 16, legY = bodyTop + bodyH - 4;
+  ctx.fillStyle   = "#9cc4e8";
   ctx.strokeStyle = "#333333";
   ctx.lineWidth   = 2;
+  // Left leg
+  rrPath(ctx, cx - 13, legY, legW, legH, 5);
+  ctx.fill();
+  ctx.stroke();
+  // Right leg
+  rrPath(ctx, cx + 4, legY, legW, legH, 5);
+  ctx.fill();
   ctx.stroke();
 
-  // Eyes (squinted / sad — downward arcs)
+  // Small shoes / feet
+  ctx.fillStyle   = "#cc8855";
+  ctx.strokeStyle = "#333333";
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(cx - 9, legY + legH + 3, 7, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx + 9, legY + legH + 3, 7, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // --- Stubby arms raised up in distress ---
+  var armW = 9, armH = 18;
+  ctx.fillStyle   = "#9cc4e8";
   ctx.strokeStyle = "#333333";
   ctx.lineWidth   = 2;
-  ctx.beginPath();
-  ctx.arc(cx - 6, cy - 34, 5, Math.PI * 0.1, Math.PI * 0.9, false); // left eye arc
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx + 6, cy - 34, 5, Math.PI * 0.1, Math.PI * 0.9, false); // right eye arc
-  ctx.stroke();
-
-  // Tears — two small blue drops per eye
-  ctx.fillStyle = "#66aaff";
-  ctx.beginPath();
-  ctx.ellipse(cx - 8, cy - 24, 2, 4, 0, 0, Math.PI * 2);
+  // Left arm — angled up-left
+  ctx.save();
+  ctx.translate(cx - bodyW / 2 + 2, bodyTop + 6);
+  ctx.rotate(-0.55);
+  rrPath(ctx, -armW / 2, -armH, armW, armH, 5);
   ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + 8, cy - 24, 2, 4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  // Right arm — angled up-right
+  ctx.save();
+  ctx.translate(cx + bodyW / 2 - 2, bodyTop + 6);
+  ctx.rotate(0.55);
+  rrPath(ctx, -armW / 2, -armH, armW, armH, 5);
   ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 
-  // Mouth (down-turned frown)
+  // --- Head ---
+  ctx.fillStyle   = "#f6c9a0";
   ctx.strokeStyle = "#333333";
-  ctx.lineWidth   = 2;
+  ctx.lineWidth   = 2.5;
   ctx.beginPath();
-  ctx.arc(cx, cy - 26, 6, Math.PI * 0.1, Math.PI * 0.9, false);
+  ctx.arc(cx, headCy, headR, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
 
-  // Arms out (distressed)
-  ctx.strokeStyle = "#f5c842";
-  ctx.lineWidth   = 4;
+  // Hair tuft — a few short brown curved strokes on top
+  ctx.strokeStyle = "#7a4a1a";
+  ctx.lineWidth   = 2.5;
   ctx.lineCap     = "round";
+  var tuftBase = headCy - headR + 2;
+  // Centre tuft
   ctx.beginPath();
-  ctx.moveTo(cx - 14, cy - 8);
-  ctx.lineTo(cx - 26, cy + 4);
+  ctx.moveTo(cx, tuftBase);
+  ctx.quadraticCurveTo(cx + 2, tuftBase - 9, cx + 1, tuftBase - 14);
   ctx.stroke();
+  // Left tuft
   ctx.beginPath();
-  ctx.moveTo(cx + 14, cy - 8);
-  ctx.lineTo(cx + 26, cy + 4);
+  ctx.moveTo(cx - 6, tuftBase + 1);
+  ctx.quadraticCurveTo(cx - 9, tuftBase - 6, cx - 8, tuftBase - 11);
   ctx.stroke();
+  // Right tuft
+  ctx.beginPath();
+  ctx.moveTo(cx + 6, tuftBase + 1);
+  ctx.quadraticCurveTo(cx + 9, tuftBase - 6, cx + 8, tuftBase - 11);
+  ctx.stroke();
+  ctx.lineCap = "butt";
 
-  // Legs
+  // --- Rosy cheeks (soft pink, low alpha) ---
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  ctx.fillStyle   = "#f6a6a6";
   ctx.beginPath();
-  ctx.moveTo(cx - 7, cy + 20);
-  ctx.lineTo(cx - 7, cy + 38);
-  ctx.stroke();
+  ctx.ellipse(cx - 11, headCy + 5, 6, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(cx + 7, cy + 20);
-  ctx.lineTo(cx + 7, cy + 38);
+  ctx.ellipse(cx + 11, headCy + 5, 6, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // --- Closed crying eyes — downward "^" arcs (squeezed shut) ---
+  ctx.strokeStyle = "#333333";
+  ctx.lineWidth   = 2.2;
+  ctx.lineCap     = "round";
+  // Left eye — arc pointing downward (open side down = squeezed shut upward)
+  ctx.beginPath();
+  ctx.arc(cx - 6, headCy - 2, 5, Math.PI * 1.15, Math.PI * 1.85, false);
   ctx.stroke();
+  // Right eye
+  ctx.beginPath();
+  ctx.arc(cx + 6, headCy - 2, 5, Math.PI * 1.15, Math.PI * 1.85, false);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+
+  // --- Tear streams — prominent elongated drops from each eye ---
+  ctx.fillStyle = "#66aaff";
+  // Left tear — two drops forming a stream
+  ctx.beginPath();
+  ctx.ellipse(cx - 9, headCy + 6,  2.5, 5, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx - 10, headCy + 14, 2, 4, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Right tear stream
+  ctx.beginPath();
+  ctx.ellipse(cx + 9, headCy + 6,  2.5, 5, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 10, headCy + 14, 2, 4, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // --- Wide-open wailing mouth ---
+  // Dark maroon filled oval for the open mouth
+  ctx.fillStyle   = "#771122";
+  ctx.strokeStyle = "#333333";
+  ctx.lineWidth   = 1.8;
+  ctx.beginPath();
+  ctx.ellipse(cx, headCy + 9, 7, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Small pink tongue at the bottom of the mouth
+  ctx.fillStyle = "#ee6677";
+  ctx.beginPath();
+  ctx.ellipse(cx, headCy + 12, 3.5, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.restore();
 }
