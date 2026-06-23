@@ -455,7 +455,7 @@
   // Hit area: 44x44 px square centred on the icon (touch-friendly).
   // ---------------------------------------------------------------------------
   var MUTE_BTN = {
-    cx: CANVAS_W - 95,   // icon centre X — clear of the door HUD (x:885–951)
+    cx: CANVAS_W - 134,  // icon centre X — left of the bigger door backing panel (panX≈870)
     cy: 24,              // icon centre Y
     r:  16               // hit-circle radius (generous)
   };
@@ -602,17 +602,17 @@
     ctx.fillText("Anleitung:", CANVAS_W / 2, anlY);
 
     ctx.fillStyle = "#443322";
-    ctx.font      = "12px system-ui, sans-serif";
+    ctx.font      = "13px system-ui, sans-serif";
     ctx.fillText(
-      "Ziel: Bring die Gummiente in die Wanne, bevor die Zeit abläuft und das Kind ins Bad kommt.",
+      "Ziel: Bring die Ente in die Wanne, bevor das Kind ins Bad kommt!",
       CANVAS_W / 2, anlY + 18
     );
     ctx.fillText(
-      "Sprung: SPACE halten lädt die Kraft (sie pendelt) – loslassen springt.",
+      "Sprung: SPACE halten lädt die Kraft (pendelt) – loslassen springt.",
       CANVAS_W / 2, anlY + 36
     );
     ctx.fillText(
-      "Zielen: ←/→ Richtung · ↑/↓ Winkel · die gepunktete Linie zeigt die Flugbahn.",
+      "Zielen: ←/→ Richtung · ↑/↓ Winkel · Linie = Flugbahn-Vorschau.",
       CANVAS_W / 2, anlY + 54
     );
 

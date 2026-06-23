@@ -117,64 +117,86 @@ function _drawChildBar(ctx, childProgress) {
 // ---------------------------------------------------------------------------
 // Door — top-right corner.  Light strip under it grows with childProgress.
 // Near full (>0.85) the handle visibly dips downward.
+// Backing panel gives it a clear dedicated zone in the HUD.
 // ---------------------------------------------------------------------------
 function _drawDoor(ctx, childProgress) {
   var fill = Math.min(1, Math.max(0, childProgress));
 
-  // Door geometry (fixed position, top-right area)
-  var dw   = 56;
-  var dh   = 88;
-  var dx   = CANVAS_W - dw - 14;
-  var dy   = 8;
+  // Door geometry — bigger, clearly bounded in top-right corner
+  var dw   = 74;
+  var dh   = 112;
+  var dx   = CANVAS_W - dw - 16;
+  var dy   = 12;
+
+  // Strip geometry (strip grows downward from door bottom; capped so it stays
+  // well above the center "Kind naht" bar at y≈80)
+  var stripMaxH = 50;   // max strip height — dy(12)+dh(112)+3+50 = 177 < 190
+  var stripGap  = 3;    // gap between door bottom and strip top
+  var stripY    = dy + dh + stripGap;
+
+  // Backing panel — encloses door + label area above + strip area below
+  var panW = dw + 28;               // panel is wider than door for breathing room
+  var panH = dy + dh + stripGap + stripMaxH + 6;   // full height incl. strip area + bottom pad
+  var panX = CANVAS_W - panW - 6;
+  var panY = 4;
 
   ctx.save();
 
+  // Dark semi-transparent rounded backing panel
+  ctx.globalAlpha = 0.42;
+  ctx.fillStyle   = "#0a1020";
+  rrPath(ctx, panX, panY, panW, panH, 10);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth   = 1;
+  rrPath(ctx, panX, panY, panW, panH, 10);
+  ctx.stroke();
+
   // Door frame
   ctx.fillStyle   = "#8b6040";
-  rrPath(ctx, dx - 5, dy - 5, dw + 10, dh + 10, 5);
+  rrPath(ctx, dx - 6, dy - 6, dw + 12, dh + 12, 6);
   ctx.fill();
   ctx.strokeStyle = "#4a3020";
-  ctx.lineWidth   = 3;
-  rrPath(ctx, dx - 5, dy - 5, dw + 10, dh + 10, 5);
+  ctx.lineWidth   = 3.5;
+  rrPath(ctx, dx - 6, dy - 6, dw + 12, dh + 12, 6);
   ctx.stroke();
 
   // Door panel
   ctx.fillStyle = "#c8944a";
-  rrPath(ctx, dx, dy, dw, dh, 3);
+  rrPath(ctx, dx, dy, dw, dh, 4);
   ctx.fill();
   ctx.strokeStyle = "#4a3020";
-  ctx.lineWidth   = 2;
-  rrPath(ctx, dx, dy, dw, dh, 3);
+  ctx.lineWidth   = 2.5;
+  rrPath(ctx, dx, dy, dw, dh, 4);
   ctx.stroke();
 
-  // Door panel inset detail
+  // Door panel inset detail (proportionally scaled: ~8px inset)
   ctx.strokeStyle = "rgba(80,50,20,0.4)";
-  ctx.lineWidth   = 1;
-  rrPath(ctx, dx + 6, dy + 6, dw - 12, dh - 12, 2);
+  ctx.lineWidth   = 1.5;
+  rrPath(ctx, dx + 8, dy + 8, dw - 16, dh - 16, 3);
   ctx.stroke();
 
-  // Handle — dips downward when childProgress > 0.85
-  var handleDip = (fill > 0.85) ? ((fill - 0.85) / 0.15) * 8 : 0; // 0..8 px dip
-  var hx        = dx + dw - 12;
+  // Handle — dips downward when childProgress > 0.85 (dip scaled to door size)
+  var handleDip = (fill > 0.85) ? ((fill - 0.85) / 0.15) * 10 : 0; // 0..10 px dip
+  var hx        = dx + dw - 15;
   var hy        = dy + dh * 0.55 + handleDip;
   ctx.beginPath();
-  ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+  ctx.arc(hx, hy, 6, 0, Math.PI * 2);
   ctx.fillStyle   = "#f0c050";
   ctx.fill();
   ctx.strokeStyle = "#806010";
-  ctx.lineWidth   = 1.5;
+  ctx.lineWidth   = 2;
   ctx.stroke();
 
-  // Light strip under the door — 40 px tall so it reads clearly at a glance
-  var stripMaxH = 40;
-  var stripH    = fill * stripMaxH;
-  var stripY    = dy + dh + 3; // just below the door panel
+  // Light strip under the door — grows from strip bottom edge upward
+  var stripH = fill * stripMaxH;
 
   if (stripH > 0.5) {
     // Soft glow halo behind strip
     ctx.globalAlpha = 0.30 * fill;
     ctx.fillStyle   = "#ffee88";
-    rrPath(ctx, dx - 4, stripY - 2, dw + 8, stripMaxH + 4, 4);
+    rrPath(ctx, dx - 5, stripY - 2, dw + 10, stripMaxH + 4, 5);
     ctx.fill();
     ctx.globalAlpha = 1;
 
@@ -182,19 +204,19 @@ function _drawDoor(ctx, childProgress) {
     var lightAlpha = 0.65 + fill * 0.35;
     ctx.globalAlpha = lightAlpha;
     ctx.fillStyle   = "#ffe060";
-    rrPath(ctx, dx, stripY + (stripMaxH - stripH), dw, stripH, 2);
+    rrPath(ctx, dx, stripY + (stripMaxH - stripH), dw, stripH, 3);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
 
-  // Vertical light crack from the door's inner-left edge — grows in width (0→14px)
+  // Vertical light crack from the door's inner-left edge — grows in width (0→18px)
   // This makes the door look like it's cracking open as the child approaches.
-  var crackW = fill * 14;
+  var crackW = fill * 18;
   if (crackW > 0.5) {
     // Glow backing for the crack
     ctx.globalAlpha = 0.25 * fill;
     ctx.fillStyle   = "#ffee88";
-    ctx.fillRect(dx - 2, dy, crackW + 6, dh);
+    ctx.fillRect(dx - 2, dy, crackW + 7, dh);
     ctx.globalAlpha = 1;
 
     // Bright crack slice
@@ -204,12 +226,12 @@ function _drawDoor(ctx, childProgress) {
     ctx.globalAlpha = 1;
   }
 
-  // Label above door
-  ctx.fillStyle    = "rgba(30,20,10,0.75)";
-  ctx.font         = "bold 8px system-ui, sans-serif";
+  // Label inside backing panel, above the door frame
+  ctx.fillStyle    = "rgba(220,200,160,0.90)";
+  ctx.font         = "bold 9px system-ui, sans-serif";
   ctx.textAlign    = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("TÜR", dx + dw / 2, dy - 6);
+  ctx.fillText("KIND", dx + dw / 2, dy - 8);
 
   ctx.restore();
 }
