@@ -198,9 +198,15 @@ var Music = (function () {
       if (!_ensureMasterGain()) { return; }
 
       _muted = _readMuteState();
-      // Apply mute state to gain immediately (no ramp needed on cold start)
-      _masterGain.gain.cancelScheduledValues(zzfxX.currentTime);
-      _masterGain.gain.value = _muted ? 0 : MUSIC_VOLUME;
+      // Apply mute state — silent immediately when muted; fade in when unmuted.
+      var now = zzfxX.currentTime;
+      _masterGain.gain.cancelScheduledValues(now);
+      if (_muted) {
+        _masterGain.gain.value = 0;
+      } else {
+        _masterGain.gain.setValueAtTime(0, now);
+        _masterGain.gain.linearRampToValueAtTime(MUSIC_VOLUME, now + 1.2);
+      }
 
       // Align first note slightly ahead so the first tick has time to schedule.
       _nextNoteTime = zzfxX.currentTime + 0.05;

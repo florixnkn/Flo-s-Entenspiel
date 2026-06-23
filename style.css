@@ -9,12 +9,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #b8d4e8;   /* soft bathroom-tile blue — cartoon-friendly */
+  background: linear-gradient(180deg, #cfe6f4 0%, #aecbe2 55%, #94b6d4 100%);
+  background-attachment: fixed;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 canvas#game {
   display: block;
+  cursor: default;
   /* Scale up to fill most of the viewport while preserving the 960:600 ratio */
   width: min(98vw, 153.6vh);
   height: auto;

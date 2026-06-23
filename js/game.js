@@ -6,6 +6,14 @@
   var canvas = document.getElementById("game");
   var ctx    = canvas.getContext("2d");
 
+  var _dpr = 1;
+  function _applyHiDPI() {
+    _dpr = Math.min(window.devicePixelRatio || 1, 3); // cap at 3x to bound memory
+    canvas.width  = CANVAS_W * _dpr;
+    canvas.height = CANVAS_H * _dpr;
+    // NOTE: do NOT set canvas.style.width/height — style.css governs the displayed size.
+  }
+
   // ---------------------------------------------------------------------------
   // Best-time persistence (localStorage, guarded for file:// restriction)
   // ---------------------------------------------------------------------------
@@ -59,6 +67,37 @@
   };
 
   var duck = createDuck(0, 0);
+
+  // ---------------------------------------------------------------------------
+  // Asset loading gate — prevents game logic and pop-in until images are ready.
+  // ---------------------------------------------------------------------------
+  var _boot      = { done: false };
+  var _bootStart = null;
+
+  // Screen-change fade-in — "" ensures first real state triggers a fade.
+  var _fadeAlpha     = 0;
+  var _fadeLastState = "";
+
+  // Vignette gradient — lazily created and cached (screen-space logical coords).
+  var _vignette = null;
+  function _getVignette(ctx) {
+    if (_vignette) return _vignette;
+    var g2 = ctx.createRadialGradient(CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.35, CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.85);
+    g2.addColorStop(0, "rgba(0,0,0,0)");
+    g2.addColorStop(1, "rgba(10,15,30,0.16)");   // faint dark corners
+    _vignette = g2;
+    return _vignette;
+  }
+
+  function _assetProgress() {
+    var total = 0, loaded = 0;
+    for (var k in IMG) {
+      if (!IMG.hasOwnProperty(k)) continue;
+      total++;
+      if (imgReady(IMG[k])) loaded++;
+    }
+    return total === 0 ? 1 : loaded / total;   // 0..1
+  }
 
   // ---------------------------------------------------------------------------
   // Level loader — loads level, initialises props, injects faucet/trampoline
@@ -130,12 +169,16 @@
     }
 
     draw();
+    _drawFadeOverlay();
   }
 
   // ---------------------------------------------------------------------------
   // Update
   // ---------------------------------------------------------------------------
   function update(dt) {
+    // Freeze all game logic until assets are decoded.
+    if (!_boot.done) { return; }
+
     g.totalTime += dt;
 
     // Juice system update (particles, shake, slow-mo decay) — always runs
@@ -436,6 +479,31 @@
   // Draw
   // ---------------------------------------------------------------------------
   function draw() {
+    // Re-establish device-pixel scale every frame so all logical-coord drawing
+    // is rendered at full device resolution (HiDPI / Retina support).
+    ctx.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+
+    // Loading screen — shown until all IMG entries are decoded (or 6 s timeout).
+    if (!_boot.done) {
+      if (_bootStart === null) { _bootStart = (typeof performance !== "undefined" ? performance.now() : Date.now()); }
+      var _elapsed = ((typeof performance !== "undefined" ? performance.now() : Date.now()) - _bootStart) / 1000;
+      var _prog = _assetProgress();
+      if (_prog >= 1 || _elapsed > 6) {
+        _boot.done = true;
+      } else {
+        _drawLoadingScreen(ctx, _prog, _elapsed);
+        return;
+      }
+    }
+
+    // Screen-change detection — triggers fade whenever g.state changes.
+    // Placed here (after the boot return) so it only runs once fully booted;
+    // the very first TITLE frame will trigger a fade → clean reveal from black.
+    if (g.state !== _fadeLastState) {
+      _fadeLastState = g.state;
+      _fadeAlpha = 0.6;   // start dark whenever the screen changes
+    }
+
     // Clear full canvas first (outside shake transform so background doesn't jitter)
     ctx.fillStyle = PAL.sky;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -485,6 +553,15 @@
     ctx.restore();
     // --- End screenshake region ---
 
+    // Subtle vignette over the bathroom scene — only during in-game states.
+    // Sits above the world but under the HUD and overlays.
+    if (_INGAME_STATES[g.state]) {
+      ctx.save();
+      ctx.fillStyle = _getVignette(ctx);
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.restore();
+    }
+
     // Screen-space flash (outside shake so it covers the whole viewport cleanly)
     // Drawn on top of the world but under the HUD/overlays.
     Juice.drawFlash(ctx);
@@ -520,6 +597,107 @@
     // Mute button + menu button drawn on top of everything on in-game screens too
     _drawMuteButton(ctx);
     _drawMenuButton(ctx);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen-change fade overlay — drawn in tick() after draw() so it covers
+  // ALL states (including TITLE/LEVELSELECT/HELP which return early in draw()).
+  // Uses logical 960x600 coords; draw() always leaves the transform at base DPR.
+  // ---------------------------------------------------------------------------
+  function _drawFadeOverlay() {
+    if (_fadeAlpha <= 0.001) return;
+    ctx.save();
+    ctx.globalAlpha = _fadeAlpha;
+    ctx.fillStyle = "#0a1424";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.restore();
+    _fadeAlpha -= 0.07;            // ~0.15 s fade at 60fps
+    if (_fadeAlpha < 0) _fadeAlpha = 0;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Loading screen — drawn during asset decode, before any game state runs.
+  // prog 0..1, elapsed = seconds since boot started.
+  // ---------------------------------------------------------------------------
+  function _drawLoadingScreen(ctx, prog, elapsed) {
+    ctx.save();
+
+    // Soft bathroom-sky gradient background
+    var grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+    grad.addColorStop(0, "#cfe6f4");
+    grad.addColorStop(1, "#94b6d4");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // --- Simple rubber duck above the title ---
+    var dcx = CANVAS_W / 2;
+    var dcy = CANVAS_H * 0.27;
+
+    // Body
+    ctx.fillStyle = "#f5d000";
+    ctx.beginPath();
+    ctx.ellipse(dcx, dcy + 6, 30, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    ctx.beginPath();
+    ctx.arc(dcx + 22, dcy - 8, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Beak
+    ctx.fillStyle = "#e06010";
+    ctx.beginPath();
+    ctx.moveTo(dcx + 33, dcy - 8);
+    ctx.lineTo(dcx + 44, dcy - 5);
+    ctx.lineTo(dcx + 33, dcy - 2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = "#111111";
+    ctx.beginPath();
+    ctx.arc(dcx + 26, dcy - 11, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(dcx + 27, dcy - 12, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Game title ---
+    ctx.fillStyle    = "#cc6600";
+    ctx.font         = "bold 34px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Ab in die Wanne!", CANVAS_W / 2, CANVAS_H * 0.40);
+
+    // --- Progress bar ---
+    var barW  = 360, barH = 14;
+    var barX  = (CANVAS_W - barW) / 2;
+    var barY  = CANVAS_H * 0.56 - barH / 2;
+    var barR  = 7;
+
+    // Track
+    ctx.fillStyle = "rgba(20,40,60,0.25)";
+    rrPath(ctx, barX, barY, barW, barH, barR);
+    ctx.fill();
+
+    // Filled portion
+    var fillW = Math.max(barR * 2, barW * prog);
+    ctx.fillStyle = "#dd8833";
+    rrPath(ctx, barX, barY, fillW, barH, barR);
+    ctx.fill();
+
+    // --- Animated "Lädt …" label ---
+    var dotCount = 1 + (Math.floor(elapsed * 2) % 3);
+    var dots = "";
+    for (var di = 0; di < dotCount; di++) { dots += "."; }
+    ctx.fillStyle    = "#5a7a90";
+    ctx.font         = "14px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Lädt " + dots, CANVAS_W / 2, CANVAS_H * 0.56 + barH / 2 + 10);
+
+    ctx.restore();
   }
 
   // ---------------------------------------------------------------------------
@@ -2301,27 +2479,73 @@
     }
   });
 
-  // Mousemove — tracks which LEVELSELECT tile the cursor is over.
+  // Mousemove — tracks LEVELSELECT tile hover and sets cursor pointer feedback.
   // Uses the same getBoundingClientRect scale mapping as the click handler.
   canvas.addEventListener("mousemove", function (e) {
-    if (g.state !== "LEVELSELECT") {
-      if (_hoveredTileIndex !== -1) { _hoveredTileIndex = -1; }
-      return;
-    }
     var rect   = canvas.getBoundingClientRect();
     var scaleX = CANVAS_W / rect.width;
     var scaleY = CANVAS_H / rect.height;
     var cx     = (e.clientX - rect.left) * scaleX;
     var cy     = (e.clientY - rect.top)  * scaleY;
 
-    var found = -1;
-    for (var i = 0; i < _levelTileRects.length; i++) {
-      if (_hitRect(cx, cy, _levelTileRects[i])) {
-        found = i;
-        break;
+    // Track LEVELSELECT tile hover (visual highlight).
+    if (g.state === "LEVELSELECT") {
+      var found = -1;
+      for (var i = 0; i < _levelTileRects.length; i++) {
+        if (_hitRect(cx, cy, _levelTileRects[i])) {
+          found = i;
+          break;
+        }
+      }
+      _hoveredTileIndex = found;
+    } else {
+      if (_hoveredTileIndex !== -1) { _hoveredTileIndex = -1; }
+    }
+
+    // Determine whether the cursor is over any clickable element.
+    var overClickable = false;
+
+    // Mute button — always active.
+    var mdx = cx - MUTE_BTN.cx;
+    var mdy = cy - MUTE_BTN.cy;
+    if (Math.sqrt(mdx * mdx + mdy * mdy) <= MUTE_BTN.r) {
+      overClickable = true;
+    }
+
+    // In-game menu button.
+    if (!overClickable && _INGAME_STATES[g.state] && _hitRect(cx, cy, MENU_BTN)) {
+      overClickable = true;
+    }
+
+    // Title screen buttons.
+    if (!overClickable && g.state === "TITLE") {
+      if (_hitRect(cx, cy, _titleBtnRects.start)  ||
+          _hitRect(cx, cy, _titleBtnRects.select) ||
+          _hitRect(cx, cy, _titleBtnRects.help)) {
+        overClickable = true;
       }
     }
-    _hoveredTileIndex = found;
+
+    // Level select tiles and back button.
+    if (!overClickable && g.state === "LEVELSELECT") {
+      if (_hitRect(cx, cy, _levelSelectBackRect)) {
+        overClickable = true;
+      } else {
+        for (var j = 0; j < _levelTileRects.length; j++) {
+          if (_hitRect(cx, cy, _levelTileRects[j])) {
+            overClickable = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // Help back button.
+    if (!overClickable && g.state === "HELP" && _hitRect(cx, cy, _helpBackRect)) {
+      overClickable = true;
+    }
+
+    canvas.style.cursor = overClickable ? "pointer" : "default";
   });
 
   // Point-in-rect helper
@@ -2332,5 +2556,7 @@
   }
 
   // --- Kick off ---
+  _applyHiDPI();
+  window.addEventListener("resize", _applyHiDPI);
   requestAnimationFrame(tick);
 }());
