@@ -30,6 +30,9 @@ function createDuck(startX, startY) {
 
     // Cat stun — set by props.js; duckUpdate blocks input while > 0
     stunTime: 0,
+
+    // Hurt timer — > 0 while duck lies on the floor after a fall
+    hurtTimer: 0,
   };
 }
 
@@ -53,12 +56,17 @@ function duckReset(duck, startX, startY) {
   duck.triggerLand = false;
   duck.fellOff  = false;
   duck.stunTime = 0;
+  duck.hurtTimer = 0;
+  duck.animState = "idle";
 }
 
 function duckUpdate(duck, dt, platforms) {
-  // Fall-off-bottom check runs every tick regardless of charge state,
-  // so a charging duck can still respawn. Actual reset is done by the caller
-  // (game.js) which reads duck.fellOff and triggers duckReset.
+  // While hurt, the duck lies frozen on the floor — game.js ticks the timer
+  // and calls duckReset when it expires. Skip all input / physics this tick.
+  if (duck.hurtTimer > 0) { return; }
+
+  // Fall-off-bottom check (duck.fellOff kept for backwards-compat but
+  // will no longer trigger because game.js catches GROUND_Y first).
   duck.fellOff = (duck.y - duck.radius > CANVAS_H);
   if (duck.fellOff) { return; }
 
@@ -207,8 +215,143 @@ function _duckAnimUpdate(duck, dt) {
 
 // ---------- Drawing ----------
 
+// ---------- Hurt pose ----------
+// Drawn when animState === "hurt" (hurtTimer > 0).  The duck is tipped on its
+// back with dizzy stars circling above and an "x" eye.
+function _duckDrawHurt(ctx, duck) {
+  var r  = duck.radius;
+
+  // Contact shadow (same as normal pose, world-space)
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle   = "#221100";
+  ctx.beginPath();
+  ctx.ellipse(duck.x, duck.y + r * 0.55, r * 0.80, r * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(duck.x, duck.y);
+
+  // Tip the duck ~63° (1.1 rad) — lands it on its back/side
+  ctx.rotate(1.1);
+
+  // Body (same ellipse, now rotated)
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r, r * 0.85, 0, 0, Math.PI * 2);
+  ctx.fillStyle   = PAL.duckBody;
+  ctx.fill();
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 2.5;
+  ctx.stroke();
+
+  // Chest highlight
+  ctx.beginPath();
+  ctx.ellipse(r * 0.15, r * 0.15, r * 0.45, r * 0.35, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = PAL.duckChest;
+  ctx.fill();
+
+  // Head
+  var hx = r * 0.55;
+  var hy = -r * 0.5;
+  var hr = r * 0.55;
+  ctx.beginPath();
+  ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+  ctx.fillStyle   = PAL.duckBody;
+  ctx.fill();
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 2.5;
+  ctx.stroke();
+
+  // Beak
+  ctx.beginPath();
+  ctx.moveTo(hx + hr * 0.75, hy);
+  ctx.lineTo(hx + hr * 0.75 + r * 0.45, hy - r * 0.08);
+  ctx.lineTo(hx + hr * 0.75 + r * 0.45, hy + r * 0.15);
+  ctx.closePath();
+  ctx.fillStyle   = PAL.duckBeak;
+  ctx.fill();
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 1.8;
+  ctx.stroke();
+
+  // Eye white
+  var ex = hx + hr * 0.25;
+  var ey = hy - hr * 0.2;
+  ctx.beginPath();
+  ctx.arc(ex, ey, hr * 0.32, 0, Math.PI * 2);
+  ctx.fillStyle = PAL.duckEyeW;
+  ctx.fill();
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  // "x" eye — two short crossed strokes
+  var xs = hr * 0.16;
+  ctx.strokeStyle = PAL.duckEye;
+  ctx.lineWidth   = 2.2;
+  ctx.lineCap     = "round";
+  ctx.beginPath();
+  ctx.moveTo(ex - xs, ey - xs);
+  ctx.lineTo(ex + xs, ey + xs);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(ex + xs, ey - xs);
+  ctx.lineTo(ex - xs, ey + xs);
+  ctx.stroke();
+
+  ctx.restore();  // end body transform
+
+  // Dizzy stars — 3 small 4-point stars orbiting above the duck head.
+  // Drawn in world space so they stay upright regardless of the body rotation.
+  // Star centre is above duck.y (roughly where the head ended up visually).
+  var orbitCx = duck.x + r * 0.30;   // slight right offset toward head side
+  var orbitCy = duck.y - r * 1.0;    // above the duck
+  var orbitR  = r * 0.55;
+  // Spin speed: use a coarse time approximation from hurtTimer counting down.
+  // We don't have totalTime here, so derive a phase from hurtTimer itself.
+  var phase = (HURT_DURATION - duck.hurtTimer) * 3.0;  // ~3 rad/s spin
+  var starColors = ["#ffe050", "#ffcc00", "#ffd866"];
+
+  for (var si = 0; si < 3; si++) {
+    var ang = phase + (si * Math.PI * 2 / 3);
+    var sx  = orbitCx + Math.cos(ang) * orbitR;
+    var sy  = orbitCy + Math.sin(ang) * orbitR * 0.55;  // flatten orbit vertically
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(ang * 1.5);   // spin each star on its own axis too
+
+    var sr = r * 0.13;   // star arm half-length
+    ctx.fillStyle = starColors[si];
+    ctx.strokeStyle = "#cc9900";
+    ctx.lineWidth   = 1.0;
+    ctx.beginPath();
+    // 4-point star: two crossed rectangles (diamond style)
+    ctx.moveTo(0, -sr * 2.2);
+    ctx.lineTo(sr * 0.65, -sr * 0.65);
+    ctx.lineTo(sr * 2.2, 0);
+    ctx.lineTo(sr * 0.65, sr * 0.65);
+    ctx.lineTo(0, sr * 2.2);
+    ctx.lineTo(-sr * 0.65, sr * 0.65);
+    ctx.lineTo(-sr * 2.2, 0);
+    ctx.lineTo(-sr * 0.65, -sr * 0.65);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 // timeLeft is optional — when < 5 the duck's eyes widen to mirror clock urgency.
 function duckDraw(ctx, duck, timeLeft) {
+  // Hurt state — delegate to the special pose drawer and exit
+  if (duck.hurtTimer > 0 || duck.animState === "hurt") {
+    _duckDrawHurt(ctx, duck);
+    return;
+  }
+
   // Soft contact shadow — drawn in world space before the body transform so it
   // stays flat on the ground regardless of squash/stretch rotation.
   ctx.save();

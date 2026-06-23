@@ -45,8 +45,7 @@ var LEVELS = [
       { x: 265, y: 180, w: 110, h: 20, surface: "normal", label: "Handtuchregal" },
       { x: 460, y: 280, w: 120, h: 20, surface: "normal", label: "Waschbecken"   },
       { x: 650, y: 380, w: 110, h: 20, surface: "normal", label: "Heizkörper"    },
-      { x: 760, y: 470, w: 100, h: 20, surface: "normal", label: "Hocker"        },
-      { x: 0,   y: 570, w: 960, h: 30, surface: "normal", label: ""              }
+      { x: 760, y: 470, w: 100, h: 20, surface: "normal", label: "Hocker"        }
     ],
 
     props: [
@@ -75,8 +74,7 @@ var LEVELS = [
     platforms: [
       { x: 50,  y: 70,  w: 130, h: 25, surface: "normal", label: "Schrank" },
       { x: 255, y: 170, w: 105, h: 20, surface: "soap",   label: "Seife"   },
-      { x: 660, y: 365, w: 120, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 560, y: 570, w: 400, h: 30, surface: "normal", label: ""        }
+      { x: 660, y: 365, w: 120, h: 20, surface: "normal", label: "Waschbecken" }
     ],
 
     props: [
@@ -108,8 +106,7 @@ var LEVELS = [
       { x: 50,  y: 60,  w: 110, h: 25, surface: "normal", label: "Schrank"    },
       { x: 235, y: 160, w: 100, h: 20, surface: "soap",   label: "Seife"      },
       { x: 430, y: 255, w: 110, h: 20, surface: "normal", label: "Regal"      },
-      { x: 640, y: 350, w: 100, h: 20, surface: "normal", label: "Heizkörper" },
-      { x: 600, y: 570, w: 360, h: 30, surface: "normal", label: ""           }
+      { x: 640, y: 350, w: 100, h: 20, surface: "normal", label: "Heizkörper" }
     ],
 
     props: [
@@ -140,8 +137,7 @@ var LEVELS = [
       { x: 780, y: 90,  w: 130, h: 25, surface: "normal", label: "Schrank"     },
       { x: 560, y: 185, w: 120, h: 20, surface: "normal", label: "Regal"       },
       { x: 355, y: 280, w: 120, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 165, y: 375, w: 120, h: 20, surface: "normal", label: "Heizkörper"  },
-      { x: 0,   y: 570, w: 360, h: 30, surface: "normal", label: ""            }
+      { x: 165, y: 375, w: 120, h: 20, surface: "normal", label: "Heizkörper"  }
     ],
 
     props: [
@@ -169,8 +165,7 @@ var LEVELS = [
     platforms: [
       { x: 40,  y: 320, w: 120, h: 25, surface: "normal", label: "Schrank"     },
       { x: 470, y: 180, w: 110, h: 20, surface: "normal", label: "Regal"       },
-      { x: 660, y: 300, w: 120, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 520, y: 570, w: 440, h: 30, surface: "normal", label: ""            }
+      { x: 660, y: 300, w: 120, h: 20, surface: "normal", label: "Waschbecken" }
     ],
 
     props: [
@@ -198,8 +193,7 @@ var LEVELS = [
       { x: 785, y: 80,  w: 120, h: 25, surface: "normal", label: "Schrank"     },
       { x: 560, y: 185, w: 105, h: 20, surface: "soap",   label: "Seife"       },
       { x: 340, y: 285, w: 110, h: 20, surface: "normal", label: "Regal"       },
-      { x: 150, y: 385, w: 110, h: 20, surface: "normal", label: "Heizkörper"  },
-      { x: 0,   y: 570, w: 350, h: 30, surface: "normal", label: ""            }
+      { x: 150, y: 385, w: 110, h: 20, surface: "normal", label: "Heizkörper"  }
     ],
 
     props: [
@@ -227,8 +221,7 @@ var LEVELS = [
       { x: 40,  y: 80,  w: 120, h: 25, surface: "normal", label: "Schrank"     },
       { x: 300, y: 200, w: 100, h: 20, surface: "normal", label: "Regal"       },
       { x: 560, y: 250, w: 100, h: 20, surface: "normal", label: "Brett"       },
-      { x: 720, y: 370, w: 120, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 600, y: 570, w: 360, h: 30, surface: "normal", label: ""            }
+      { x: 720, y: 370, w: 120, h: 20, surface: "normal", label: "Waschbecken" }
     ],
 
     props: [
@@ -260,8 +253,7 @@ var LEVELS = [
       { x: 40,  y: 80,  w: 120, h: 25, surface: "normal", label: "Schrank"     },
       { x: 290, y: 175, w: 110, h: 20, surface: "normal", label: "Regal"       },
       { x: 500, y: 270, w: 100, h: 20, surface: "normal", label: "Brett"       },
-      { x: 700, y: 365, w: 120, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 600, y: 570, w: 360, h: 30, surface: "normal", label: ""            }
+      { x: 700, y: 365, w: 120, h: 20, surface: "normal", label: "Waschbecken" }
     ],
 
     props: [
@@ -294,8 +286,7 @@ var LEVELS = [
       { x: 800, y: 70,  w: 120, h: 25, surface: "normal", label: "Schrank"     },
       { x: 580, y: 165, w: 110, h: 20, surface: "normal", label: "Regal"       },
       { x: 360, y: 265, w: 120, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 180, y: 370, w: 100, h: 20, surface: "normal", label: "Hocker"      },
-      { x: 0,   y: 570, w: 380, h: 30, surface: "normal", label: ""            }
+      { x: 180, y: 370, w: 100, h: 20, surface: "normal", label: "Hocker"      }
     ],
 
     props: [
@@ -326,8 +317,7 @@ var LEVELS = [
       { x: 420, y: 70,  w: 120, h: 25, surface: "normal", label: "Schrank"     },
       { x: 210, y: 175, w: 100, h: 20, surface: "soap",   label: "Seife"       },
       { x: 60,  y: 290, w: 100, h: 20, surface: "normal", label: "Hocker"      },
-      { x: 560, y: 300, w: 110, h: 20, surface: "normal", label: "Waschbecken" },
-      { x: 520, y: 570, w: 440, h: 30, surface: "normal", label: ""            }
+      { x: 560, y: 300, w: 110, h: 20, surface: "normal", label: "Waschbecken" }
     ],
 
     props: [

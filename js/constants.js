@@ -67,6 +67,10 @@ function drawImageCover(ctx, img, dx, dy, dw, dh) {
   ctx.drawImage(img, sx, sy, srcW, srcH, dx, dy, dw, dh);
 }
 
+// --- Floor / hurt ---
+var GROUND_Y       = CANVAS_H - 12;  // y of the floor the duck lands on when it falls
+var HURT_DURATION  = 1.0;            // seconds the duck lies hurt before respawning
+
 // --- Physics ---
 var GRAVITY        = 2200;   // px/s² downward acceleration
 var GROUND_FRICTION = 0.80;  // vx multiplier on land (lower = more brake)

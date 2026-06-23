@@ -309,6 +309,34 @@
       return;
     }
 
+    // --- Hurt path: duck is lying on the floor recovering ---
+    // Timer keeps running as a penalty; all gameplay is frozen.
+    if (duck.hurtTimer > 0) {
+      duck.hurtTimer -= dt;
+      if (duck.hurtTimer <= 0) {
+        // Timer expired — respawn at level start
+        duckReset(duck, g.level.start.x, g.level.start.y);
+        duck.stunTime = 0;
+      }
+      // Tick timer / footstep / lose check even during hurt (penalty keeps running)
+      g.timeLeft -= dt;
+      if (g.timeLeft < 0) { g.timeLeft = 0; }
+      g.childProgress = 1 - g.timeLeft / g.level.timeLimit;
+      if (g.timeLeft > 0 && g.timeLeft <= 5) {
+        var hurtTickSec = Math.ceil(g.timeLeft);
+        if (hurtTickSec !== g._lastTickSec) {
+          g._lastTickSec = hurtTickSec;
+          SFX.tick();
+          Juice.triggerClockPulse();
+        }
+      }
+      Juice.updateFootstep(g.childProgress, dt);
+      if (g.timeLeft <= 0) {
+        g.state = "LOSE_CHILD";
+      }
+      return;
+    }
+
     // Tick down duck stun (blocks input in duck.js if stunTime > 0)
     if (duck.stunTime > 0) {
       duck.stunTime -= dt;
@@ -317,14 +345,7 @@
 
     duckUpdate(duck, dt, g.platforms);
 
-    // Respawn if duck fell off bottom (timer keeps running)
-    if (duck.fellOff) {
-      duckReset(duck, g.level.start.x, g.level.start.y);
-      duck.stunTime = 0;
-      return;
-    }
-
-    // --- WIN check: duck body enters tub rectangle ---
+    // --- WIN check (must come BEFORE ground check so tub entry always wins) ---
     var tub = g.tub;
     if (
       duck.x + duck.radius > tub.x &&
@@ -340,6 +361,22 @@
       Juice.slowMo(JUICE_SLOWMO_FACTOR, JUICE_SLOWMO_DUR);
       SFX.splash();
       return;
+    }
+
+    // --- Ground / hurt check: duck reaches the canvas floor ---
+    if (duck.y + duck.radius >= GROUND_Y) {
+      duck.y        = GROUND_Y - duck.radius;
+      duck.vx       = 0;
+      duck.vy       = 0;
+      duck.onGround = false;
+      duck.charging = false;
+      duck.animState = "hurt";
+      duck.animT    = 0;
+      duck.hurtTimer = HURT_DURATION;
+      SFX.hurt();
+      Juice.shake(JUICE_SHAKE_LAND_MAG, JUICE_SHAKE_LAND_DUR);
+      Juice.landDust(duck.x, duck.y + duck.radius);
+      return;  // skip props this frame
     }
 
     // --- Props update (trampoline, wind, cat, toilet) ---
