@@ -172,6 +172,10 @@
         g.state = "LEVELSELECT";
         // leave g._prevState unchanged — LEVELSELECT entry guard will fire on first tick
       }
+      // H = open help screen
+      if (Input.pressed("KeyH")) {
+        g.state = "HELP";
+      }
       return;
     }
 
@@ -195,6 +199,17 @@
         g.state           = "TITLE";
         g._prevState      = "TITLE";
         _hoveredTileIndex = -1;
+      }
+      return;
+    }
+
+    // --- HELP screen ---
+    if (g.state === "HELP") {
+      // Esc is handled by the global handler above (sends HELP→TITLE).
+      // KeyH also exits back to TITLE.
+      if (Input.pressed("KeyH")) {
+        g.state      = "TITLE";
+        g._prevState = "TITLE";
       }
       return;
     }
@@ -392,6 +407,12 @@
       return;
     }
 
+    if (g.state === "HELP") {
+      _drawHelpScreen(ctx);
+      _drawMuteButton(ctx);
+      return;
+    }
+
     // Cartoon bathroom backdrop — drawn BEFORE screenshake so it stays fixed
     drawBackdrop(ctx);
 
@@ -574,11 +595,11 @@
     var heroY = 18;
     drawTitleHero(ctx, heroX, heroY, heroW, heroH);
 
-    // --- Main card — title + Anleitung + controls + best time + buttons ---
+    // --- Main card — title + goal hint + best time + three buttons ---
     var bw = 620;
-    var bh = 310;
+    var bh = 250;
     var bx = (CANVAS_W - bw) / 2;
-    var by = heroY + heroH + 10;   // 228 px from top
+    var by = heroY + heroH + 10;   // ~228 px from top
 
     ctx.fillStyle = "#fffde8";
     rrPath(ctx, bx, by, bw, bh, 22);
@@ -595,38 +616,28 @@
     ctx.textBaseline = "top";
     ctx.fillText("Ab in die Wanne!", CANVAS_W / 2, by + 14);
 
-    // --- Anleitung block ---
-    var anlY = by + 62;   // top of the how-to section
-    ctx.fillStyle = "#553300";
-    ctx.font      = "bold 12px system-ui, sans-serif";
-    ctx.fillText("Anleitung:", CANVAS_W / 2, anlY);
-
+    // Short goal line
     ctx.fillStyle = "#443322";
     ctx.font      = "13px system-ui, sans-serif";
     ctx.fillText(
       "Ziel: Bring die Ente in die Wanne, bevor das Kind ins Bad kommt!",
-      CANVAS_W / 2, anlY + 18
-    );
-    ctx.fillText(
-      "Sprung: SPACE halten lädt die Kraft (pendelt) – loslassen springt.",
-      CANVAS_W / 2, anlY + 36
-    );
-    ctx.fillText(
-      "Zielen: ←/→ Richtung · ↑/↓ Winkel · Linie = Flugbahn-Vorschau.",
-      CANVAS_W / 2, anlY + 54
+      CANVAS_W / 2, by + 66
     );
 
-    // Controls footer
-    ctx.fillStyle = "#334455";
-    ctx.font      = "12px system-ui, sans-serif";
-    ctx.fillText("R = neu · M = Ton · Esc = Menü", CANVAS_W / 2, anlY + 76);
+    // Hint pointing to the help screen
+    ctx.fillStyle = "#886622";
+    ctx.font      = "italic 12px system-ui, sans-serif";
+    ctx.fillText(
+      "Volle Anleitung → Knopf »Anleitung« oder Taste H",
+      CANVAS_W / 2, by + 88
+    );
 
     // Divider
     ctx.strokeStyle = "#ddc880";
     ctx.lineWidth   = 1.5;
     ctx.beginPath();
-    ctx.moveTo(bx + 40, anlY + 94);
-    ctx.lineTo(bx + bw - 40, anlY + 94);
+    ctx.moveTo(bx + 40, by + 108);
+    ctx.lineTo(bx + bw - 40, by + 108);
     ctx.stroke();
 
     // Best time display (cached on TITLE entry — no per-frame localStorage read)
@@ -634,49 +645,63 @@
     if (best !== null && best !== undefined) {
       ctx.fillStyle = "#886600";
       ctx.font      = "13px system-ui, sans-serif";
-      ctx.fillText("Beste: " + Math.ceil(Math.max(0, best)) + " s Bonus", CANVAS_W / 2, anlY + 106);
+      ctx.fillText("Beste: " + Math.ceil(Math.max(0, best)) + " s Bonus", CANVAS_W / 2, by + 122);
     }
 
-    // --- Two action buttons: START (Space) + LEVEL WÄHLEN (L) ---
-    var btnY   = anlY + 128;
+    // --- Three action buttons: START · LEVEL WÄHLEN · ANLEITUNG ---
+    // Layout: START and LEVEL WÄHLEN side by side, ANLEITUNG below centered.
     var btnH   = 40;
-    var btnGap = 20;
-    var btnW   = 210;
+    var btnGap = 16;
+    var btnW   = 190;
+    var row1Y  = by + 145;
     var btn1X  = CANVAS_W / 2 - btnW - btnGap / 2;
     var btn2X  = CANVAS_W / 2 + btnGap / 2;
+    var btn3X  = CANVAS_W / 2 - btnW / 2;
+    var row2Y  = row1Y + btnH + 10;
 
     // START button
     ctx.fillStyle = "#dd6600";
-    rrPath(ctx, btn1X, btnY, btnW, btnH, 10);
+    rrPath(ctx, btn1X, row1Y, btnW, btnH, 10);
     ctx.fill();
     ctx.strokeStyle = "#aa4400";
     ctx.lineWidth   = 3;
-    rrPath(ctx, btn1X, btnY, btnW, btnH, 10);
+    rrPath(ctx, btn1X, row1Y, btnW, btnH, 10);
     ctx.stroke();
-
     ctx.fillStyle    = "#ffffff";
-    ctx.font         = "bold 16px system-ui, sans-serif";
+    ctx.font         = "bold 15px system-ui, sans-serif";
     ctx.textBaseline = "middle";
-    ctx.fillText("START  [SPACE]", btn1X + btnW / 2, btnY + btnH / 2);
+    ctx.fillText("START  [SPACE]", btn1X + btnW / 2, row1Y + btnH / 2);
 
     // LEVEL WÄHLEN button
     ctx.fillStyle = "#336699";
-    rrPath(ctx, btn2X, btnY, btnW, btnH, 10);
+    rrPath(ctx, btn2X, row1Y, btnW, btnH, 10);
     ctx.fill();
     ctx.strokeStyle = "#224477";
     ctx.lineWidth   = 3;
-    rrPath(ctx, btn2X, btnY, btnW, btnH, 10);
+    rrPath(ctx, btn2X, row1Y, btnW, btnH, 10);
     ctx.stroke();
-
     ctx.fillStyle    = "#ffffff";
-    ctx.font         = "bold 16px system-ui, sans-serif";
-    ctx.fillText("LEVEL WÄHLEN  [L]", btn2X + btnW / 2, btnY + btnH / 2);
+    ctx.font         = "bold 15px system-ui, sans-serif";
+    ctx.fillText("LEVEL WÄHLEN  [L]", btn2X + btnW / 2, row1Y + btnH / 2);
+
+    // ANLEITUNG button
+    ctx.fillStyle = "#2a6644";
+    rrPath(ctx, btn3X, row2Y, btnW, btnH, 10);
+    ctx.fill();
+    ctx.strokeStyle = "#1a4432";
+    ctx.lineWidth   = 3;
+    rrPath(ctx, btn3X, row2Y, btnW, btnH, 10);
+    ctx.stroke();
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = "bold 15px system-ui, sans-serif";
+    ctx.fillText("ANLEITUNG  [H]", btn3X + btnW / 2, row2Y + btnH / 2);
 
     ctx.restore();
 
     // Store button rects for click handling (in canvas-space coords)
-    _titleBtnRects.start  = { x: btn1X, y: btnY, w: btnW, h: btnH };
-    _titleBtnRects.select = { x: btn2X, y: btnY, w: btnW, h: btnH };
+    _titleBtnRects.start  = { x: btn1X,  y: row1Y, w: btnW, h: btnH };
+    _titleBtnRects.select = { x: btn2X,  y: row1Y, w: btnW, h: btnH };
+    _titleBtnRects.help   = { x: btn3X,  y: row2Y, w: btnW, h: btnH };
   }
 
   // Hero image placeholder — isolate here so a real image swap is ONE edit.
@@ -913,11 +938,228 @@
   }
 
   // Rects for click handling — updated each draw call
-  var _titleBtnRects       = { start: null, select: null };
+  var _titleBtnRects       = { start: null, select: null, help: null };
   var _levelSelectBackRect = null;
+  var _helpBackRect        = null;
 
   // Hover state for LEVELSELECT tiles — -1 means no tile hovered
   var _hoveredTileIndex = -1;
+
+  // ---------------------------------------------------------------------------
+  // Keycap helper — draws a keyboard-key shaped pill with a label inside.
+  // x, y = top-left of the keycap; w, h = dimensions; label = text inside.
+  // ---------------------------------------------------------------------------
+  function _drawKeyCap(ctx, x, y, w, h, label) {
+    // Shadow
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    rrPath(ctx, x + 2, y + 3, w, h, 5);
+    ctx.fill();
+    // Key body
+    ctx.fillStyle = "#dde4f0";
+    rrPath(ctx, x, y, w, h, 5);
+    ctx.fill();
+    // Top highlight
+    ctx.fillStyle = "#f0f5ff";
+    rrPath(ctx, x + 2, y + 2, w - 4, h * 0.45, 3);
+    ctx.fill();
+    // Border
+    ctx.strokeStyle = "#8899bb";
+    ctx.lineWidth   = 1.5;
+    rrPath(ctx, x, y, w, h, 5);
+    ctx.stroke();
+    // Label
+    ctx.fillStyle    = "#222244";
+    ctx.font         = "bold 11px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  }
+
+  // ---------------------------------------------------------------------------
+  // HELP screen — full-screen Anleitung overlay
+  // ---------------------------------------------------------------------------
+  function _drawHelpScreen(ctx) {
+    drawBackdrop(ctx);
+
+    ctx.save();
+
+    // Dark overlay
+    ctx.fillStyle = "rgba(10,20,40,0.72)";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // --- Outer card ---
+    var cw = 780, ch = 500;
+    var cx = (CANVAS_W - cw) / 2;
+    var cy = (CANVAS_H - ch) / 2;
+
+    ctx.fillStyle = "#f7f3e8";
+    rrPath(ctx, cx, cy, cw, ch, 20);
+    ctx.fill();
+    ctx.strokeStyle = "#4488aa";
+    ctx.lineWidth   = 4;
+    rrPath(ctx, cx, cy, cw, ch, 20);
+    ctx.stroke();
+
+    // Screen title
+    ctx.fillStyle    = "#225577";
+    ctx.font         = "bold 30px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Anleitung", CANVAS_W / 2, cy + 14);
+
+    // Divider under title
+    ctx.strokeStyle = "#aaccdd";
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + 40, cy + 52);
+    ctx.lineTo(cx + cw - 40, cy + 52);
+    ctx.stroke();
+
+    var col = cx + 36;        // left margin inside card
+    var colR = cx + cw / 2 + 18;  // right column start
+
+    // -----------------------------------------------------------------------
+    // Section A — ZIEL
+    // -----------------------------------------------------------------------
+    var secY = cy + 62;
+    ctx.fillStyle    = "#225577";
+    ctx.font         = "bold 13px system-ui, sans-serif";
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("ZIEL", col, secY);
+
+    ctx.fillStyle = "#332211";
+    ctx.font      = "13px system-ui, sans-serif";
+    ctx.fillText(
+      "🦆 Bring die Gummiente in die Wanne 🛁, bevor die Zeit abläuft",
+      col + 40, secY
+    );
+    ctx.fillText(
+      "und das Kind ins Bad kommt!",
+      col + 40, secY + 18
+    );
+
+    // -----------------------------------------------------------------------
+    // Section B — STEUERUNG
+    // -----------------------------------------------------------------------
+    var stY = secY + 50;
+    ctx.fillStyle = "#225577";
+    ctx.font      = "bold 13px system-ui, sans-serif";
+    ctx.fillText("STEUERUNG", col, stY);
+
+    ctx.restore();  // restore before using keycap (which sets its own state)
+    ctx.save();
+
+    // Row 1: [SPACE] halten = Kraft laden (pendelt) · loslassen = Sprung
+    var kh = 22, row1Y = stY + 20;
+    _drawKeyCap(ctx, col + 40, row1Y, 58, kh, "SPACE");
+    ctx.fillStyle    = "#332211";
+    ctx.font         = "13px system-ui, sans-serif";
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("halten = Kraft laden (pendelt)  ·  loslassen = Sprung", col + 40 + 62, row1Y + 3);
+
+    // Row 2: [←] [→] = Richtung · [↑] [↓] = Winkel
+    var row2Y = row1Y + kh + 10;
+    _drawKeyCap(ctx, col + 40,      row2Y, 22, kh, "←");
+    _drawKeyCap(ctx, col + 40 + 26, row2Y, 22, kh, "→");
+    ctx.fillStyle    = "#332211";
+    ctx.font         = "13px system-ui, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillText("= Richtung", col + 40 + 54, row2Y + 3);
+    _drawKeyCap(ctx, col + 200,      row2Y, 22, kh, "↑");
+    _drawKeyCap(ctx, col + 200 + 26, row2Y, 22, kh, "↓");
+    ctx.fillText("= Winkel", col + 260, row2Y + 3);
+
+    // Hinweis: gepunktete Linie
+    var hintY = row2Y + kh + 8;
+    ctx.fillStyle = "#668899";
+    ctx.font      = "italic 12px system-ui, sans-serif";
+    ctx.fillText("Hinweis: die gepunktete Linie zeigt die Flugbahn-Vorschau", col + 40, hintY);
+
+    // Row 3: [R] Neustart · [M] Ton an/aus · [Esc] Menü
+    var row3Y = hintY + 22;
+    _drawKeyCap(ctx, col + 40, row3Y, 20, kh, "R");
+    ctx.fillStyle    = "#332211";
+    ctx.font         = "13px system-ui, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillText("Neustart", col + 64, row3Y + 3);
+    _drawKeyCap(ctx, col + 148, row3Y, 22, kh, "M");
+    ctx.fillText("Ton an/aus", col + 174, row3Y + 3);
+    _drawKeyCap(ctx, col + 278, row3Y, 34, kh, "Esc");
+    ctx.fillText("Menü", col + 316, row3Y + 3);
+
+    // -----------------------------------------------------------------------
+    // Section C — BESONDERE OBJEKTE (two-column legend, right half of card)
+    // -----------------------------------------------------------------------
+    var legX  = colR;
+    var legY0 = stY;
+    var legLH = 34;
+
+    ctx.fillStyle    = "#225577";
+    ctx.font         = "bold 13px system-ui, sans-serif";
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("BESONDERE OBJEKTE", legX, legY0);
+
+    var legendItems = [
+      { emoji: "🧼", text: "Seife — rutschig, schwer zu stoppen" },
+      { emoji: "🚽", text: "WC — nicht reinfallen!" },
+      { emoji: "🚰", text: "Hahn — bewegliche Plattform" },
+      { emoji: "🛗", text: "Hahn (senkrecht) — Fahrstuhl, trägt dich" },
+      { emoji: "🌬️", text: "Föhn — Windstoß im Takt, im richtigen Moment springen" },
+      { emoji: "🐱", text: "Katze — stößt dich weg (nicht tödlich)" }
+    ];
+
+    ctx.font = "13px system-ui, sans-serif";
+    for (var li = 0; li < legendItems.length; li++) {
+      var item = legendItems[li];
+      var iy   = legY0 + 24 + li * legLH;
+
+      // Subtle row bg alternation
+      if (li % 2 === 0) {
+        ctx.fillStyle = "rgba(34,85,119,0.06)";
+        rrPath(ctx, legX - 4, iy - 4, cw / 2 - 54, legLH - 4, 6);
+        ctx.fill();
+      }
+
+      // Emoji
+      ctx.font         = "18px system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle    = "#000000";
+      ctx.fillText(item.emoji, legX + 4, iy + legLH / 2 - 4);
+
+      // Description text
+      ctx.font         = "12px system-ui, sans-serif";
+      ctx.fillStyle    = "#332211";
+      ctx.textBaseline = "middle";
+      ctx.fillText(item.text, legX + 32, iy + legLH / 2 - 4);
+    }
+
+    // --- Back button ---
+    var backW = 180, backH = 38;
+    var backX = (CANVAS_W - backW) / 2;
+    var backY = cy + ch - backH - 16;
+
+    ctx.fillStyle = "rgba(30,50,90,0.88)";
+    rrPath(ctx, backX, backY, backW, backH, 10);
+    ctx.fill();
+    ctx.strokeStyle = "#5588aa";
+    ctx.lineWidth   = 2;
+    rrPath(ctx, backX, backY, backW, backH, 10);
+    ctx.stroke();
+
+    ctx.fillStyle    = "#cce8ff";
+    ctx.font         = "bold 15px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Zurück  [Esc]", backX + backW / 2, backY + backH / 2);
+
+    ctx.restore();
+
+    // Store back rect for click handling
+    _helpBackRect = { x: backX, y: backY, w: backW, h: backH };
+  }
 
   // ---------------------------------------------------------------------------
   // _levelItemLegend(level) — returns an array of one-line hint strings,
@@ -1922,6 +2164,19 @@
       if (_hitRect(cx, cy, _titleBtnRects.select)) {
         g.state = "LEVELSELECT";
         // leave g._prevState unchanged — LEVELSELECT entry guard will fire on first tick
+        return;
+      }
+      if (_hitRect(cx, cy, _titleBtnRects.help)) {
+        g.state = "HELP";
+        return;
+      }
+    }
+
+    // --- HELP back button ---
+    if (g.state === "HELP") {
+      if (_hitRect(cx, cy, _helpBackRect)) {
+        g.state      = "TITLE";
+        g._prevState = "TITLE";
         return;
       }
     }
