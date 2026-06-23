@@ -950,6 +950,7 @@
   // x, y = top-left of the keycap; w, h = dimensions; label = text inside.
   // ---------------------------------------------------------------------------
   function _drawKeyCap(ctx, x, y, w, h, label) {
+    ctx.save();   // isolate text-align/font so following labels keep their own state
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     rrPath(ctx, x + 2, y + 3, w, h, 5);
@@ -973,10 +974,11 @@
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+    ctx.restore();
   }
 
   // ---------------------------------------------------------------------------
-  // HELP screen — full-screen Anleitung overlay
+  // HELP screen — single-column full-width layout
   // ---------------------------------------------------------------------------
   function _drawHelpScreen(ctx) {
     drawBackdrop(ctx);
@@ -988,9 +990,9 @@
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     // --- Outer card ---
-    var cw = 780, ch = 500;
-    var cx = (CANVAS_W - cw) / 2;
-    var cy = (CANVAS_H - ch) / 2;
+    var cw = 720, ch = 544;
+    var cx = (CANVAS_W - cw) / 2;   // = 120
+    var cy = (CANVAS_H - ch) / 2;   // = 28
 
     ctx.fillStyle = "#f7f3e8";
     rrPath(ctx, cx, cy, cw, ch, 20);
@@ -1000,107 +1002,115 @@
     rrPath(ctx, cx, cy, cw, ch, 20);
     ctx.stroke();
 
-    // Screen title
+    // Title
     ctx.fillStyle    = "#225577";
     ctx.font         = "bold 30px system-ui, sans-serif";
     ctx.textAlign    = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Anleitung", CANVAS_W / 2, cy + 14);
+    ctx.fillText("Anleitung", CANVAS_W / 2, cy + 16);
 
-    // Divider under title
+    // Divider
     ctx.strokeStyle = "#aaccdd";
-    ctx.lineWidth   = 1.5;
+    ctx.lineWidth   = 1;
     ctx.beginPath();
-    ctx.moveTo(cx + 40, cy + 52);
-    ctx.lineTo(cx + cw - 40, cy + 52);
+    ctx.moveTo(cx + 40, cy + 54);
+    ctx.lineTo(cx + cw - 40, cy + 54);
     ctx.stroke();
 
-    var col = cx + 36;        // left margin inside card
-    var colR = cx + cw / 2 + 18;  // right column start
+    // Content layout constants
+    var padX    = cx + 44;
+    var contentW = cw - 88;   // = 632
+    var kh      = 22;
+
+    // Running y cursor — starts just below the divider
+    var y = cy + 66;
 
     // -----------------------------------------------------------------------
-    // Section A — ZIEL
+    // Section 1 — ZIEL
     // -----------------------------------------------------------------------
-    var secY = cy + 62;
     ctx.fillStyle    = "#225577";
     ctx.font         = "bold 13px system-ui, sans-serif";
     ctx.textAlign    = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("ZIEL", col, secY);
+    ctx.fillText("ZIEL", padX, y);
+    y += 20;
 
-    ctx.fillStyle = "#332211";
-    ctx.font      = "13px system-ui, sans-serif";
-    ctx.fillText(
-      "🦆 Bring die Gummiente in die Wanne 🛁, bevor die Zeit abläuft",
-      col + 40, secY
-    );
-    ctx.fillText(
-      "und das Kind ins Bad kommt!",
-      col + 40, secY + 18
-    );
+    ctx.fillStyle    = "#332211";
+    ctx.font         = "13px system-ui, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillText("🦆 Bring die Gummiente in die Wanne 🛁, bevor die Zeit abläuft", padX, y);
+    y += 18;
+    ctx.fillText("und das Kind ins Bad kommt!", padX, y);
+    y += 28;
 
     // -----------------------------------------------------------------------
-    // Section B — STEUERUNG
+    // Section 2 — STEUERUNG
     // -----------------------------------------------------------------------
-    var stY = secY + 50;
-    ctx.fillStyle = "#225577";
-    ctx.font      = "bold 13px system-ui, sans-serif";
-    ctx.fillText("STEUERUNG", col, stY);
+    ctx.fillStyle    = "#225577";
+    ctx.font         = "bold 13px system-ui, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillText("STEUERUNG", padX, y);
+    y += 24;
 
-    ctx.restore();  // restore before using keycap (which sets its own state)
-    ctx.save();
-
-    // Row 1: [SPACE] halten = Kraft laden (pendelt) · loslassen = Sprung
-    var kh = 22, row1Y = stY + 20;
-    _drawKeyCap(ctx, col + 40, row1Y, 58, kh, "SPACE");
+    // Row A: [SPACE] + label — keycap at (padX, y), label middle-aligned beside it
+    var spaceW = 58;
+    _drawKeyCap(ctx, padX, y, spaceW, kh, "SPACE");
     ctx.fillStyle    = "#332211";
     ctx.font         = "13px system-ui, sans-serif";
     ctx.textAlign    = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("halten = Kraft laden (pendelt)  ·  loslassen = Sprung", col + 40 + 62, row1Y + 3);
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+      "halten = Kraft laden (pendelt)  ·  loslassen = Sprung",
+      padX + spaceW + 8, y + kh / 2
+    );
+    y += 34;
 
-    // Row 2: [←] [→] = Richtung · [↑] [↓] = Winkel
-    var row2Y = row1Y + kh + 10;
-    _drawKeyCap(ctx, col + 40,      row2Y, 22, kh, "←");
-    _drawKeyCap(ctx, col + 40 + 26, row2Y, 22, kh, "→");
+    // Row B: [←][→] Richtung (left) · [↑][↓] Winkel (right at padX+300)
+    _drawKeyCap(ctx, padX,      y, 22, kh, "←");
+    _drawKeyCap(ctx, padX + 26, y, 22, kh, "→");
     ctx.fillStyle    = "#332211";
     ctx.font         = "13px system-ui, sans-serif";
-    ctx.textBaseline = "top";
-    ctx.fillText("= Richtung", col + 40 + 54, row2Y + 3);
-    _drawKeyCap(ctx, col + 200,      row2Y, 22, kh, "↑");
-    _drawKeyCap(ctx, col + 200 + 26, row2Y, 22, kh, "↓");
-    ctx.fillText("= Winkel", col + 260, row2Y + 3);
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Richtung", padX + 22 + 22 + 8, y + kh / 2);
 
-    // Hinweis: gepunktete Linie
-    var hintY = row2Y + kh + 8;
-    ctx.fillStyle = "#668899";
-    ctx.font      = "italic 12px system-ui, sans-serif";
-    ctx.fillText("Hinweis: die gepunktete Linie zeigt die Flugbahn-Vorschau", col + 40, hintY);
+    _drawKeyCap(ctx, padX + 300,      y, 22, kh, "↑");
+    _drawKeyCap(ctx, padX + 300 + 26, y, 22, kh, "↓");
+    ctx.fillText("Winkel", padX + 300 + 22 + 22 + 8, y + kh / 2);
+    y += 34;
 
-    // Row 3: [R] Neustart · [M] Ton an/aus · [Esc] Menü
-    var row3Y = hintY + 22;
-    _drawKeyCap(ctx, col + 40, row3Y, 20, kh, "R");
+    // Row C: [R] Neustart · [M] Ton an/aus · [Esc] Menü — spaced across width
+    _drawKeyCap(ctx, padX, y, 22, kh, "R");
     ctx.fillStyle    = "#332211";
     ctx.font         = "13px system-ui, sans-serif";
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Neustart", padX + 22 + 8, y + kh / 2);
+
+    _drawKeyCap(ctx, padX + 200, y, 22, kh, "M");
+    ctx.fillText("Ton an/aus", padX + 200 + 22 + 8, y + kh / 2);
+
+    _drawKeyCap(ctx, padX + 430, y, 34, kh, "Esc");
+    ctx.fillText("Menü", padX + 430 + 34 + 8, y + kh / 2);
+    y += 50;   // generous gap so tipp clears Row C bottom (y+50 - kh=22 = 28px gap)
+
+    // Tipp italic hint
+    ctx.fillStyle    = "#668899";
+    ctx.font         = "italic 12px system-ui, sans-serif";
+    ctx.textAlign    = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("Neustart", col + 64, row3Y + 3);
-    _drawKeyCap(ctx, col + 148, row3Y, 22, kh, "M");
-    ctx.fillText("Ton an/aus", col + 174, row3Y + 3);
-    _drawKeyCap(ctx, col + 278, row3Y, 34, kh, "Esc");
-    ctx.fillText("Menü", col + 316, row3Y + 3);
+    ctx.fillText("Tipp: die gepunktete Linie zeigt die Flugbahn-Vorschau", padX, y);
+    y += 28;
 
     // -----------------------------------------------------------------------
-    // Section C — BESONDERE OBJEKTE (two-column legend, right half of card)
+    // Section 3 — BESONDERE OBJEKTE (single-column, full content width)
     // -----------------------------------------------------------------------
-    var legX  = colR;
-    var legY0 = stY;
-    var legLH = 34;
-
     ctx.fillStyle    = "#225577";
     ctx.font         = "bold 13px system-ui, sans-serif";
     ctx.textAlign    = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("BESONDERE OBJEKTE", legX, legY0);
+    ctx.fillText("BESONDERE OBJEKTE", padX, y);
+    y += 22;
 
     var legendItems = [
       { emoji: "🧼", text: "Seife — rutschig, schwer zu stoppen" },
@@ -1111,29 +1121,29 @@
       { emoji: "🐱", text: "Katze — stößt dich weg (nicht tödlich)" }
     ];
 
-    ctx.font = "13px system-ui, sans-serif";
+    var rowH = 26;
     for (var li = 0; li < legendItems.length; li++) {
-      var item = legendItems[li];
-      var iy   = legY0 + 24 + li * legLH;
+      var item  = legendItems[li];
+      var rowY  = y + li * rowH;
+      var rowMid = rowY + rowH / 2;
 
-      // Subtle row bg alternation
+      // Alternating row background on even rows (full content width)
       if (li % 2 === 0) {
         ctx.fillStyle = "rgba(34,85,119,0.06)";
-        rrPath(ctx, legX - 4, iy - 4, cw / 2 - 54, legLH - 4, 6);
-        ctx.fill();
+        ctx.fillRect(padX - 4, rowY, contentW + 8, rowH);
       }
 
-      // Emoji
+      // Emoji — vertically centred in the row
       ctx.font         = "18px system-ui, sans-serif";
+      ctx.textAlign    = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle    = "#000000";
-      ctx.fillText(item.emoji, legX + 4, iy + legLH / 2 - 4);
+      ctx.fillText(item.emoji, padX + 4, rowMid);
 
-      // Description text
-      ctx.font         = "12px system-ui, sans-serif";
+      // Description text — vertically centred, indented past emoji
+      ctx.font         = "13px system-ui, sans-serif";
       ctx.fillStyle    = "#332211";
-      ctx.textBaseline = "middle";
-      ctx.fillText(item.text, legX + 32, iy + legLH / 2 - 4);
+      ctx.fillText(item.text, padX + 34, rowMid);
     }
 
     // --- Back button ---
