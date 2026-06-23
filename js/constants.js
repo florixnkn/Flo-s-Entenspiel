@@ -36,7 +36,8 @@ var IMG = {
   furnHeizkoerper: new Image(),
   furnHocker:      new Image(),
   furnSeife:       new Image(),
-  loseChild:       new Image()
+  loseChild:       new Image(),
+  winChild:        new Image()
 };
 IMG.titleHero.src       = "./assets/title-hero.png";
 IMG.bgBathroom.src      = "./assets/bg-bathroom.png";
@@ -48,6 +49,7 @@ IMG.furnHeizkoerper.src = "./assets/heizkoerper.png";
 IMG.furnHocker.src      = "./assets/hocker.png";
 IMG.furnSeife.src       = "./assets/seife.png";
 IMG.loseChild.src       = "./assets/lose-child.png";
+IMG.winChild.src        = "./assets/win-child.png";
 
 // Returns true only when an Image element has fully decoded pixel data available.
 function imgReady(img) {

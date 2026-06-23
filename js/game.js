@@ -1947,41 +1947,90 @@
   // ---------------------------------------------------------------------------
   function _drawWinBeatOverlay(ctx, levelIndex, timeBonus, timer) {
     ctx.save();
-    var alpha = Math.min(0.7, (1.8 - timer) * 0.7);
-    ctx.fillStyle = "rgba(20,100,30," + alpha + ")";
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    var bw = 480, bh = 160;
-    var bx = (CANVAS_W - bw) / 2;
-    var by = (CANVAS_H - bh) / 2;
+    if (imgReady(IMG.winChild)) {
+      // --- Branch A: photo background ---
+      drawImageCover(ctx, IMG.winChild, 0, 0, CANVAS_W, CANVAS_H);
 
-    ctx.fillStyle = "#eefff0";
-    rrPath(ctx, bx, by, bw, bh, 18);
-    ctx.fill();
-    ctx.strokeStyle = "#228833";
-    ctx.lineWidth   = 4;
-    rrPath(ctx, bx, by, bw, bh, 18);
-    ctx.stroke();
+      // Soft celebratory vignette for text contrast
+      ctx.fillStyle = "rgba(0,20,0,0.40)";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    ctx.fillStyle    = "#115522";
-    ctx.font         = "bold 36px system-ui, sans-serif";
-    ctx.textAlign    = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Level " + (levelIndex + 1) + " geschafft! 👏", CANVAS_W / 2, by + 58);
+      // Translucent banner near bottom-center
+      var bw = 620, bh = 150;
+      var bx = (CANVAS_W - bw) / 2;
+      var by = CANVAS_H - 200;
 
-    var bonusSecs = Math.ceil(Math.max(0, timeBonus));
-    ctx.fillStyle = "#336600";
-    ctx.font      = "16px system-ui, sans-serif";
-    ctx.fillText("+ " + bonusSecs + " s übrig", CANVAS_W / 2, by + 98);
+      ctx.fillStyle = "rgba(8,30,12,0.70)";
+      rrPath(ctx, bx, by, bw, bh, 14);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.30)";
+      ctx.lineWidth   = 2;
+      rrPath(ctx, bx, by, bw, bh, 14);
+      ctx.stroke();
 
-    var nextIdx = levelIndex + 1;
-    var nextText = (nextIdx < LEVELS.length)
-      ? "Weiter zu Level " + (nextIdx + 1) + " →"
-      : "Alle Level geschafft!";
-    ctx.fillStyle = PAL.hintText;
-    ctx.font      = "15px system-ui, sans-serif";
-    ctx.fillText(nextText, CANVAS_W / 2, by + 132);
+      // Headline
+      ctx.fillStyle    = "#d8ffd8";
+      ctx.font         = "bold 30px system-ui, sans-serif";
+      ctx.textAlign    = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Level " + (levelIndex + 1) + " geschafft! 👏", CANVAS_W / 2, by + 38);
 
+      // Time bonus line
+      var bonusSecs = Math.ceil(Math.max(0, timeBonus));
+      ctx.fillStyle = "#ffffff";
+      ctx.font      = "16px system-ui, sans-serif";
+      ctx.fillText("+ " + bonusSecs + " s übrig", CANVAS_W / 2, by + 76);
+
+      // Next-level footer
+      var nextIdx  = levelIndex + 1;
+      var nextText = (nextIdx < LEVELS.length)
+        ? "Weiter zu Level " + (nextIdx + 1) + " →"
+        : "Alle Level geschafft!";
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.font      = "15px system-ui, sans-serif";
+      ctx.fillText(nextText, CANVAS_W / 2, by + 112);
+
+    } else {
+      // --- Branch B: fallback — original green fade + card ---
+      var alpha = Math.min(0.7, (1.8 - timer) * 0.7);
+      ctx.fillStyle = "rgba(20,100,30," + alpha + ")";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      var bw = 480, bh = 160;
+      var bx = (CANVAS_W - bw) / 2;
+      var by = (CANVAS_H - bh) / 2;
+
+      ctx.fillStyle = "#eefff0";
+      rrPath(ctx, bx, by, bw, bh, 18);
+      ctx.fill();
+      ctx.strokeStyle = "#228833";
+      ctx.lineWidth   = 4;
+      rrPath(ctx, bx, by, bw, bh, 18);
+      ctx.stroke();
+
+      ctx.fillStyle    = "#115522";
+      ctx.font         = "bold 36px system-ui, sans-serif";
+      ctx.textAlign    = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Level " + (levelIndex + 1) + " geschafft! 👏", CANVAS_W / 2, by + 58);
+
+      var bonusSecs = Math.ceil(Math.max(0, timeBonus));
+      ctx.fillStyle = "#336600";
+      ctx.font      = "16px system-ui, sans-serif";
+      ctx.fillText("+ " + bonusSecs + " s übrig", CANVAS_W / 2, by + 98);
+
+      var nextIdx  = levelIndex + 1;
+      var nextText = (nextIdx < LEVELS.length)
+        ? "Weiter zu Level " + (nextIdx + 1) + " →"
+        : "Alle Level geschafft!";
+      ctx.fillStyle = PAL.hintText;
+      ctx.font      = "15px system-ui, sans-serif";
+      ctx.fillText(nextText, CANVAS_W / 2, by + 132);
+    }
+
+    ctx.textAlign    = "left";
+    ctx.textBaseline = "alphabetic";
     ctx.restore();
   }
 
