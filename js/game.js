@@ -1680,169 +1680,159 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Tub renderer — classic cute cartoon bathtub: oval rim opening, water fill,
-  // foam mound, porcelain body with shadow, claw feet, chrome faucet, sparkles.
-  // Collision rect is unchanged (tx,ty,tw,th). Feet extend cosmetically below th.
+  // Tub renderer — classic cute cartoon bathtub matching the soft-cartoon
+  // furniture sprite style: porcelain body, rolled rim, blue water, light foam,
+  // small rounded feet, one sparkle cue.  Collision rect unchanged (tx,ty,tw,th).
   // ---------------------------------------------------------------------------
   function drawTub(ctx, tub) {
     if (!tub) return;
     var tx = tub.x, ty = tub.y, tw = tub.w, th = tub.h;
     ctx.save();
 
-    // --- Soft contact-shadow ellipse beneath whole tub (cosmetic) ---
-    ctx.save();
+    // --- Soft contact-shadow ellipse (cosmetic, outside collision rect) ---
     ctx.globalAlpha = 0.18;
     ctx.fillStyle   = "#112233";
     ctx.beginPath();
-    ctx.ellipse(tx + tw / 2, ty + th + 14, tw * 0.48, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(tx + tw / 2, ty + th + 10, tw * 0.44, 6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
+    ctx.globalAlpha = 1;
 
-    // --- Claw feet — four small oval feet, drawn first so body overlaps them ---
-    var footRx = 6, footRy = 4;
-    var footY  = ty + th + 6;          // cosmetic: just below collision rect
-    ctx.fillStyle   = "#d0dde6";
+    // --- Two small rounded feet below the body (cosmetic) ---
+    var footY  = ty + th + 2;
+    var footW  = 14, footH = 9;
+    ctx.fillStyle   = "#d8e6ee";
     ctx.strokeStyle = PAL.outline;
     ctx.lineWidth   = 2;
-    var footXs = [tx + tw * 0.18, tx + tw * 0.38, tx + tw * 0.62, tx + tw * 0.82];
-    for (var fi = 0; fi < footXs.length; fi++) {
-      ctx.beginPath();
-      ctx.ellipse(footXs[fi], footY, footRx, footRy, 0, 0, Math.PI * 2);
+    [tx + tw * 0.22 - footW / 2, tx + tw * 0.78 - footW / 2].forEach(function(fx) {
+      rrPath(ctx, fx, footY, footW, footH, 4);
       ctx.fill();
       ctx.stroke();
-    }
+    });
 
-    // --- Porcelain tub body — wide rounded rect, lower portion has a blue shadow ---
-    var bodyR = 18;
+    // --- Porcelain body — tall rounded rect; slightly warm white ---
+    var bodyR = 16;
     ctx.fillStyle = "#eef4f8";
     rrPath(ctx, tx, ty, tw, th, bodyR);
     ctx.fill();
 
-    // Lower-half shadow tint — gives the tub a curved, bowl-like feel
+    // Lower-body blue shading for bowl volume
     ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle   = "#5599bb";
-    rrPath(ctx, tx, ty + th * 0.55, tw, th * 0.45, bodyR);
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle   = "#4488bb";
+    rrPath(ctx, tx, ty + th * 0.52, tw, th * 0.48, bodyR);
     ctx.fill();
     ctx.restore();
 
-    // Porcelain inner wall highlight — subtle lighter rect on left side
+    // Left-side inner highlight (porcelain gloss)
     ctx.save();
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.38;
     ctx.fillStyle   = "#ffffff";
-    rrPath(ctx, tx + 6, ty + 10, 10, th * 0.55, 5);
+    rrPath(ctx, tx + 7, ty + 10, 9, th * 0.50, 4);
     ctx.fill();
     ctx.restore();
 
-    // --- Elliptical rim opening — oval at the top, reads as "drop in here" ---
-    var rimCx  = tx + tw / 2;
-    var rimCy  = ty + th * 0.18;        // near top of collision rect
-    var rimRx  = tw * 0.44;
-    var rimRy  = th * 0.16;
+    // --- Rolled rim — a flat cap at the very top of the body ---
+    // Inner trough (inset): where the water sits
+    var rimInset = tw * 0.06;
+    var waterTop = ty + th * 0.12;
+    var waterH   = th * 0.30;
 
-    // Water fill inside the oval opening
+    // Water fill (flat rect with rounded ends, well inside the rim)
     ctx.fillStyle   = "#7ecaea";
     ctx.globalAlpha = 0.92;
-    ctx.beginPath();
-    ctx.ellipse(rimCx, rimCy, rimRx, rimRy, 0, 0, Math.PI * 2);
+    rrPath(ctx, tx + rimInset, waterTop, tw - rimInset * 2, waterH, 8);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // Water shimmer stripe across the oval
+    // Water surface shimmer stripe
     ctx.save();
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.50;
     ctx.fillStyle   = "#aee6f8";
-    ctx.beginPath();
-    ctx.ellipse(rimCx - rimRx * 0.1, rimCy - rimRy * 0.25, rimRx * 0.62, rimRy * 0.28, 0, 0, Math.PI * 2);
+    rrPath(ctx, tx + rimInset + 8, waterTop + 4, (tw - rimInset * 2) * 0.55, 5, 3);
     ctx.fill();
     ctx.restore();
 
-    // --- Foam mound — overlapping white circles that rise just above the rim ---
-    var foamY = rimCy - rimRy * 0.6;   // slightly above the oval center
-    ctx.fillStyle = "#ffffff";
+    // --- Three tidy foam bubbles near the left end of the water ---
+    var foamCy = waterTop + waterH * 0.35;
     var foams = [
-      {fx: rimCx - rimRx * 0.35, fy: foamY,        fr: rimRy * 0.70},
-      {fx: rimCx,                 fy: foamY - rimRy * 0.55, fr: rimRy * 0.85},
-      {fx: rimCx + rimRx * 0.35, fy: foamY,        fr: rimRy * 0.70},
-      {fx: rimCx - rimRx * 0.60, fy: foamY + rimRy * 0.30, fr: rimRy * 0.50},
-      {fx: rimCx + rimRx * 0.60, fy: foamY + rimRy * 0.30, fr: rimRy * 0.50}
+      {fx: tx + rimInset + 18, fy: foamCy,      fr: 7},
+      {fx: tx + rimInset + 32, fy: foamCy - 5,  fr: 8},
+      {fx: tx + rimInset + 46, fy: foamCy + 2,  fr: 6}
     ];
-    for (var fmi = 0; fmi < foams.length; fmi++) {
-      var fm = foams[fmi];
+    ctx.fillStyle = "#ffffff";
+    for (var fi = 0; fi < foams.length; fi++) {
       ctx.beginPath();
-      ctx.arc(fm.fx, fm.fy, fm.fr, 0, Math.PI * 2);
+      ctx.arc(foams[fi].fx, foams[fi].fy, foams[fi].fr, 0, Math.PI * 2);
       ctx.fill();
     }
-    // Foam outlines — thin dark stroke to keep them readable
-    ctx.strokeStyle = "#ccddee";
+    ctx.strokeStyle = "#cce4ef";
     ctx.lineWidth   = 1;
-    for (var fmi2 = 0; fmi2 < foams.length; fmi2++) {
-      var fm2 = foams[fmi2];
+    for (var fi2 = 0; fi2 < foams.length; fi2++) {
       ctx.beginPath();
-      ctx.arc(fm2.fx, fm2.fy, fm2.fr, 0, Math.PI * 2);
+      ctx.arc(foams[fi2].fx, foams[fi2].fy, foams[fi2].fr, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // --- Oval rim lip — thick bright ellipse ring on top of everything ---
-    ctx.strokeStyle = "#f0f8ff";
-    ctx.lineWidth   = 5;
-    ctx.beginPath();
-    ctx.ellipse(rimCx, rimCy, rimRx, rimRy, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = PAL.outline;
-    ctx.lineWidth   = 2.5;
-    ctx.stroke();
+    // --- Rolled rim lip — bright thick band across the top of the body ---
+    ctx.fillStyle = "#f4fafd";
+    rrPath(ctx, tx, ty, tw, th * 0.14, bodyR);
+    ctx.fill();
 
-    // --- Chrome faucet/tap — small L-shape at top-right corner of rim ---
-    var faucetX = tx + tw * 0.80;
-    var faucetY = ty + 8;
+    // Rim underside shading line
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle   = "#4488bb";
+    rrPath(ctx, tx + 4, ty + th * 0.11, tw - 8, 5, 2);
+    ctx.fill();
+    ctx.restore();
+
+    // --- Small chrome faucet — L-shape at top-right of the rim ---
+    var fX = tx + tw * 0.80;
+    var fY = ty + 6;
+    ctx.save();
     ctx.strokeStyle = "#aabbcc";
     ctx.lineWidth   = 5;
     ctx.lineCap     = "round";
     ctx.beginPath();
-    ctx.moveTo(faucetX, faucetY);
-    ctx.lineTo(faucetX, faucetY + 12);     // vertical pipe
-    ctx.lineTo(faucetX - 8, faucetY + 12); // horizontal spout
+    ctx.moveTo(fX, fY);
+    ctx.lineTo(fX, fY + 10);
+    ctx.lineTo(fX - 7, fY + 10);
     ctx.stroke();
-    // Chrome highlight on the pipe
+    // Highlight strip
     ctx.strokeStyle = "#ddeeff";
     ctx.lineWidth   = 2;
     ctx.beginPath();
-    ctx.moveTo(faucetX, faucetY + 1);
-    ctx.lineTo(faucetX, faucetY + 10);
+    ctx.moveTo(fX, fY + 1);
+    ctx.lineTo(fX, fY + 8);
     ctx.stroke();
     ctx.lineCap = "butt";
-    // Faucet knob
+    // Knob
     ctx.fillStyle   = "#c0d0d8";
     ctx.strokeStyle = PAL.outline;
     ctx.lineWidth   = 1.5;
     ctx.beginPath();
-    ctx.arc(faucetX, faucetY, 4, 0, Math.PI * 2);
+    ctx.arc(fX, fY, 3.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-
-    // --- Sparkle stars near foam — subtle goal cue ---
-    function _drawSparkle(sx, sy, size) {
-      ctx.save();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth   = 1.5;
-      ctx.lineCap     = "round";
-      for (var angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(sx + Math.cos(angle) * size, sy + Math.sin(angle) * size);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-    _drawSparkle(tx + tw * 0.72, ty + th * 0.05, 5);
-    ctx.globalAlpha = 0.55;
-    _drawSparkle(tx + tw * 0.82, ty + th * 0.14, 3.5);
     ctx.restore();
 
-    // --- Thick outline around tub body (drawn last to sit on top) ---
+    // --- One small sparkle — subtle goal cue, top-right area ---
+    ctx.save();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth   = 1.5;
+    ctx.lineCap     = "round";
+    ctx.globalAlpha = 0.80;
+    var spX = tx + tw * 0.68, spY = ty + th * 0.06, spR = 5;
+    for (var a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+      ctx.beginPath();
+      ctx.moveTo(spX, spY);
+      ctx.lineTo(spX + Math.cos(a) * spR, spY + Math.sin(a) * spR);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.restore();
+
+    // --- Thick dark outline on body (drawn last, on top of everything) ---
     ctx.strokeStyle = PAL.outline;
     ctx.lineWidth   = 3;
     rrPath(ctx, tx, ty, tw, th, bodyR);

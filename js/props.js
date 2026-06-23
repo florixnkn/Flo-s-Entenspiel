@@ -225,61 +225,141 @@ function propsDraw(ctx, props, totalTime) {
 }
 
 // ---------------------------------------------------------------------------
-// Toilet — white porcelain with tank + bowl; soft contact shadow, no debug text
+// Toilet — white porcelain: cistern at top, open seat + bowl below, blue water.
+// Matches soft-cartoon furniture style (thick dark outlines, blue shading, gloss).
+// Prop rect (x,y,w,h) is the hazard/bowl zone — collision unchanged.
+// Cistern rises cosmetically above y.
 // ---------------------------------------------------------------------------
 function _drawPropToilet(ctx, p) {
   var x = p.x, y = p.y, w = p.w, h = p.h;
   ctx.save();
 
-  // Soft contact shadow under the base
+  // --- Soft contact shadow beneath the base ---
   ctx.globalAlpha = 0.18;
   ctx.fillStyle   = "#221100";
-  rrPath(ctx, x + 3, y + h + 1, w, 8, 5);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Tank
-  ctx.fillStyle   = "#e8eef2";
-  rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
-  ctx.fill();
-  // Tank highlight
-  ctx.fillStyle   = "#ffffff";
-  ctx.globalAlpha = 0.5;
-  rrPath(ctx, x + w * 0.18, y + 2, w * 0.5, h * 0.12, 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = "#8899aa";
-  ctx.lineWidth   = 2;
-  rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
-  ctx.stroke();
-
-  // Bowl
-  ctx.fillStyle = "#eef4f8";
-  rrPath(ctx, x, y + h * 0.42, w, h * 0.58, 8);
-  ctx.fill();
-  // Bowl side highlight
-  ctx.fillStyle   = "#ffffff";
-  ctx.globalAlpha = 0.45;
   ctx.beginPath();
-  ctx.ellipse(x + w * 0.22, y + h * 0.62, w * 0.08, h * 0.14, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(x + w / 2, y + h + 7, w * 0.44, 6, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
+
+  // --- Cistern / tank — sits above the prop rect (cosmetic) ---
+  var cW = w * 0.68;
+  var cH = h * 0.46;
+  var cX = x + (w - cW) / 2;
+  var cY = y - cH + 4;   // rises above y; bottom overlaps bowl top slightly
+
+  // Cistern body — porcelain white
+  ctx.fillStyle = "#eef4f8";
+  rrPath(ctx, cX, cY, cW, cH, 5);
+  ctx.fill();
+
+  // Cistern blue shading on lower half
+  ctx.save();
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle   = "#4488bb";
+  rrPath(ctx, cX, cY + cH * 0.55, cW, cH * 0.45, 5);
+  ctx.fill();
+  ctx.restore();
+
+  // Cistern gloss highlight
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle   = "#ffffff";
+  rrPath(ctx, cX + 5, cY + 4, cW * 0.55, 5, 3);
+  ctx.fill();
+  ctx.restore();
+
+  // Flush button — small circle on top of cistern
+  var btnCx = cX + cW / 2;
+  var btnCy = cY + 5;
+  ctx.fillStyle   = "#d8e8f0";
   ctx.strokeStyle = PAL.outline;
-  ctx.lineWidth   = 2;
-  rrPath(ctx, x, y + h * 0.42, w, h * 0.58, 8);
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  ctx.arc(btnCx, btnCy, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Flush button inner dot
+  ctx.fillStyle = "#aabbc8";
+  ctx.beginPath();
+  ctx.arc(btnCx, btnCy, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cistern dark outline
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 2.5;
+  rrPath(ctx, cX, cY, cW, cH, 5);
   ctx.stroke();
 
-  // Water in bowl
-  ctx.fillStyle   = "#b8d8f0";
-  ctx.globalAlpha = 0.7;
-  rrPath(ctx, x + 6, y + h * 0.55, w - 12, h * 0.32, 6);
+  // --- Bowl base — wider rounded rect for the pedestal ---
+  var baseH = h * 0.30;
+  var baseW = w * 0.55;
+  var baseX = x + (w - baseW) / 2;
+  ctx.fillStyle = "#eef4f8";
+  rrPath(ctx, baseX, y + h * 0.70, baseW, baseH, 6);
+  ctx.fill();
+  ctx.save();
+  ctx.globalAlpha = 0.13;
+  ctx.fillStyle   = "#4488bb";
+  rrPath(ctx, baseX, y + h * 0.80, baseW, baseH * 0.5, 6);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 2;
+  rrPath(ctx, baseX, y + h * 0.70, baseW, baseH, 6);
+  ctx.stroke();
+
+  // --- Bowl outer shell — the main porcelain bowl shape ---
+  ctx.fillStyle = "#eef4f8";
+  rrPath(ctx, x, y, w, h * 0.78, 10);
+  ctx.fill();
+
+  // Bowl blue volume shading — lower portion
+  ctx.save();
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle   = "#4488bb";
+  rrPath(ctx, x, y + h * 0.45, w, h * 0.33, 10);
+  ctx.fill();
+  ctx.restore();
+
+  // Bowl left-side gloss highlight
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  ctx.fillStyle   = "#ffffff";
+  rrPath(ctx, x + 5, y + 8, 8, h * 0.40, 4);
+  ctx.fill();
+  ctx.restore();
+
+  // --- Open seat ring — slightly inset oval showing the seat lip ---
+  var seatInset = w * 0.07;
+  var seatH     = h * 0.55;
+  ctx.fillStyle   = "#f4fafd";
+  ctx.strokeStyle = PAL.outline;
+  ctx.lineWidth   = 2;
+  rrPath(ctx, x + seatInset, y + 2, w - seatInset * 2, seatH, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  // --- Blue water inside the seat opening ---
+  var waterInset = w * 0.14;
+  ctx.fillStyle   = "#7ecaea";
+  ctx.globalAlpha = 0.88;
+  rrPath(ctx, x + waterInset, y + seatH * 0.28, w - waterInset * 2, seatH * 0.62, 8);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Tank outline with darker stroke for polish
+  // Water shimmer
+  ctx.save();
+  ctx.globalAlpha = 0.50;
+  ctx.fillStyle   = "#aee6f8";
+  rrPath(ctx, x + waterInset + 6, y + seatH * 0.32, (w - waterInset * 2) * 0.50, 5, 3);
+  ctx.fill();
+  ctx.restore();
+
+  // --- Bowl outer outline (drawn last to cap everything) ---
   ctx.strokeStyle = PAL.outline;
-  ctx.lineWidth   = 2;
-  rrPath(ctx, x + w * 0.15, y, w * 0.7, h * 0.45, 3);
+  ctx.lineWidth   = 2.5;
+  rrPath(ctx, x, y, w, h * 0.78, 10);
   ctx.stroke();
 
   ctx.restore();
