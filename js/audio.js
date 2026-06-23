@@ -15,6 +15,7 @@
 
 window.addEventListener("keydown", function () {
   zzfxInit();
+  if (typeof Music !== "undefined") { Music.start(); }
 }, { once: true });
 
 // ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ var SFX = (function () {
     toggleMute: function () {
       _muted = !_muted;
       _saveMute();
+      if (typeof Music !== "undefined") { Music.setMuted(_muted); }
     },
 
     isMuted: function () {
