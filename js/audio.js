@@ -81,9 +81,13 @@ var SFX = (function () {
       _play(0.26, 0.04, 170, 0.01, 0.05, 0.18, 1, 1, 2.2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Splash — water entry plunge, less noisy than before.
+    // Splash / Erfolg — Wasser-"Plätschern": ein Ploosh + zwei Tropfen-Plips.
     splash: function () {
-      _play(0.28, 0.06, 240, 0.02, 0.06, 0.34, 4, 1, -1.4, 0, 0, 0, 0, 0.25, 0, 0, 0, 1, 0, 0);
+      // Haupt-Ploosh: rauschiger, abfallender Wasser-Aufprall
+      _play(0.34, 0.12, 360, 0.01, 0.05, 0.30, 4, 1.3, -1.1, 0, 0, 0, 0, 0.9, 0, 0, 0, 1, 0.08, 0);
+      // zwei Tropfen kurz danach für den Plätscher-Charakter
+      setTimeout(function () { _play(0.18, 0.08, 760, 0, 0.01, 0.11, 0, 1, -2.4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0.10, 0); }, 80);
+      setTimeout(function () { _play(0.14, 0.08, 580, 0, 0.01, 0.11, 0, 1, -2.0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0.10, 0); }, 170);
     },
 
     // Toilet plop — warm low-pitched bubble + thud.

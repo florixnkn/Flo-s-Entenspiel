@@ -281,7 +281,8 @@
     if (g.state === "WIN_BEAT") {
       // One-shot win SFX on entry
       if (g._prevState !== "WIN_BEAT") {
-        SFX.win();
+        // Erfolgssound ist das Wasser-Plätschern (SFX.splash bei Wannen-Eintritt) —
+        // keine Fanfare mehr.
         Juice.splashBurst(g.tub.x + g.tub.w / 2, g.tub.y + g.tub.h / 2);
         Juice.shake(JUICE_SHAKE_SPLASH_MAG, JUICE_SHAKE_SPLASH_DUR);
         g._prevState = "WIN_BEAT";
