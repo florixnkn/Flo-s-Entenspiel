@@ -15,10 +15,11 @@ body {
 
 canvas#game {
   display: block;
-  max-width: 100%;
-  /* Crisp pixel rendering just in case we add pixel art later */
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  /* Scale up to fill most of the viewport while preserving the 960:600 ratio */
+  width: min(98vw, 153.6vh);
+  height: auto;
+  /* Smooth scaling — the game is cartoon/photo art, not pixel art */
+  image-rendering: auto;
   /* Subtle cartoon shadow */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.20);
   border-radius: 6px;
