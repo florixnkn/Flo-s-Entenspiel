@@ -231,7 +231,12 @@ function propsDraw(ctx, props, totalTime) {
 // Cistern rises cosmetically above y.
 // ---------------------------------------------------------------------------
 function _drawPropToilet(ctx, p) {
-  var x = p.x, y = p.y, w = p.w, h = p.h;
+  // Draw the toilet a bit larger than its hazard rect for a realistic size,
+  // anchored at the rect's bottom-centre (the central bowl stays over the hazard).
+  var _ts = 1.5;
+  var _tcx = p.x + p.w / 2, _tbottom = p.y + p.h;
+  var w = p.w * _ts, h = p.h * _ts;
+  var x = _tcx - w / 2, y = _tbottom - h;
   ctx.save();
 
   // --- Soft contact shadow beneath the base ---

@@ -1349,7 +1349,7 @@
 
   // Schrank — wooden cabinet with two door panels and round knobs
   function _drawPlatSchrank(ctx, p) {
-    if (imgReady(IMG.furnSchrank)) { _drawFixtureSprite(ctx, IMG.furnSchrank, p, 0.22, 1.12); return; }
+    if (imgReady(IMG.furnSchrank)) { _drawFixtureSprite(ctx, IMG.furnSchrank, p, 0.22, 1.20); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var depth = Math.min(h, 28);  // visual depth below top surface
     _platShadow(ctx, x, y, w, depth);
@@ -1400,7 +1400,7 @@
 
   // Regal / Handtuchregal — wood plank with L-brackets; towel on Handtuchregal
   function _drawPlatRegal(ctx, p) {
-    if (imgReady(IMG.furnRegal)) { _drawFixtureSprite(ctx, IMG.furnRegal, p, 0.46, 1.10); return; }
+    if (imgReady(IMG.furnRegal)) { _drawFixtureSprite(ctx, IMG.furnRegal, p, 0.46, 1.18); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var plankH = Math.max(h, 10);
     var brW = 7, brH = Math.min(14, plankH + 8);
@@ -1465,7 +1465,7 @@
 
   // Waschbecken — white porcelain basin with small tap nub and inner shadow
   function _drawPlatWaschbecken(ctx, p) {
-    if (imgReady(IMG.furnWaschbecken)) { _drawFixtureSprite(ctx, IMG.furnWaschbecken, p, 0.36, 1.18); return; }
+    if (imgReady(IMG.furnWaschbecken)) { _drawFixtureSprite(ctx, IMG.furnWaschbecken, p, 0.36, 1.26); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var basinH = Math.max(h, 18);
 
@@ -1522,7 +1522,7 @@
 
   // Heizkörper — cream radiator panel with vertical fins
   function _drawPlatHeizkörper(ctx, p) {
-    if (imgReady(IMG.furnHeizkoerper)) { _drawFixtureSprite(ctx, IMG.furnHeizkoerper, p, 0.24, 1.08); return; }
+    if (imgReady(IMG.furnHeizkoerper)) { _drawFixtureSprite(ctx, IMG.furnHeizkoerper, p, 0.24, 1.20); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var panelH = Math.max(h, 14);
 
@@ -1567,7 +1567,7 @@
 
   // Hocker — seat slab with short legs
   function _drawPlatHocker(ctx, p) {
-    if (imgReady(IMG.furnHocker)) { _drawFixtureSprite(ctx, IMG.furnHocker, p, 0.34, 1.18); return; }
+    if (imgReady(IMG.furnHocker)) { _drawFixtureSprite(ctx, IMG.furnHocker, p, 0.34, 1.24); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var seatH = Math.max(h, 10);
     var legH  = Math.min(16, seatH);
@@ -1606,7 +1606,7 @@
 
   // Seife-platform — glossy blue soap bar on a small dish/ledge
   function _drawPlatSoap(ctx, p) {
-    if (imgReady(IMG.furnSeife)) { _drawFixtureSprite(ctx, IMG.furnSeife, p, 0.34, 1.30); return; }
+    if (imgReady(IMG.furnSeife)) { _drawFixtureSprite(ctx, IMG.furnSeife, p, 0.34, 1.15); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
 
     _platShadow(ctx, x, y, w, h);
@@ -1658,7 +1658,7 @@
 
   // Fallback shelf — clean wood plank + bracket + shadow
   function _drawPlatShelf(ctx, p) {
-    if (imgReady(IMG.furnRegal)) { _drawFixtureSprite(ctx, IMG.furnRegal, p, 0.46, 1.10); return; }
+    if (imgReady(IMG.furnRegal)) { _drawFixtureSprite(ctx, IMG.furnRegal, p, 0.46, 1.18); return; }
     var x = p.x, y = p.y, w = p.w, h = p.h;
     var plankH = Math.max(h, 10);
 
