@@ -1,5 +1,19 @@
 // js/duck.js — Rubber duck entity: charge, launch, physics, squash/stretch, draw.
 
+// ---------------------------------------------------------------------------
+// Trail / glow tuning constants (dial freely)
+// ---------------------------------------------------------------------------
+var DUCK_TRAIL_LEN          = 8;     // max history positions stored
+var DUCK_TRAIL_SPEED_MIN    = 120;   // px/s — trail only shown above this speed
+var DUCK_TRAIL_ALPHA_HEAD   = 0.38;  // alpha of the freshest ghost (closest to duck)
+var DUCK_TRAIL_ALPHA_TAIL   = 0.04;  // alpha of the oldest ghost (most faded)
+
+var DUCK_CHARGE_GLOW_BASE   = 14;    // px base glow ring radius offset beyond duck.radius
+var DUCK_CHARGE_GLOW_PULSE  = 8;     // px extra radius at full power
+var DUCK_CHARGE_SPARK_RATE  = 0.06;  // s between spark particle emits during charge
+// Charge spark color ramp: interpolated warm orange→red by power level
+// (pure code, no extra assets)
+
 function createDuck(startX, startY) {
   return {
     x:       startX,
@@ -33,6 +47,12 @@ function createDuck(startX, startY) {
 
     // Hurt timer — > 0 while duck lies on the floor after a fall
     hurtTimer: 0,
+
+    // Motion trail — array of {x,y} world positions; capped at DUCK_TRAIL_LEN
+    _trail: [],
+
+    // Charge spark throttle timer
+    _sparkTimer: 0,
   };
 }
 
@@ -58,6 +78,8 @@ function duckReset(duck, startX, startY) {
   duck.stunTime = 0;
   duck.hurtTimer = 0;
   duck.animState = "idle";
+  duck._trail   = [];
+  duck._sparkTimer = 0;
 }
 
 function duckUpdate(duck, dt, platforms) {
@@ -93,6 +115,8 @@ function duckUpdate(duck, dt, platforms) {
     duck.charging = true;
     duck.chargeT  = 0;
     duck.animState = "charging";
+    duck._trail   = [];   // clear trail when we start charging
+    duck._sparkTimer = 0;
   }
 
   if (duck.charging) {
@@ -105,6 +129,13 @@ function duckUpdate(duck, dt, platforms) {
     duck.scaleY = squashAmt;
     // Compensate width to keep volume constant (cartoony)
     duck.scaleX = 1 + (1 - squashAmt) * 0.5;
+
+    // Emit charge sparks at throttled rate
+    duck._sparkTimer -= dt;
+    if (duck._sparkTimer <= 0) {
+      duck._sparkTimer = DUCK_CHARGE_SPARK_RATE * (0.8 + Math.random() * 0.4);
+      _emitChargeSpark(duck);
+    }
 
     if (!Input.held("Space")) {
       // Release: launch!
@@ -134,6 +165,7 @@ function duckUpdate(duck, dt, platforms) {
     // noise heard when idle, and it stopped while charging (physics block is skipped).
     if (duck.triggerLand && !wasOnGround) {
       _duckLand(duck);
+      duck._trail = [];  // clear trail on landing
     }
 
     // Keep duck within canvas horizontal bounds
@@ -145,10 +177,34 @@ function duckUpdate(duck, dt, platforms) {
       duck.x  = CANVAS_W - duck.radius;
       duck.vx = -Math.abs(duck.vx) * BOUNCE_DAMPEN;
     }
+
+    // --- Update motion trail (airborne + fast only) ---
+    if (!duck.onGround && duck.hurtTimer <= 0) {
+      var spd = Math.sqrt(duck.vx * duck.vx + duck.vy * duck.vy);
+      if (spd >= DUCK_TRAIL_SPEED_MIN) {
+        // Push current position; keep array capped
+        duck._trail.push({ x: duck.x, y: duck.y });
+        if (duck._trail.length > DUCK_TRAIL_LEN) {
+          duck._trail.shift();
+        }
+      } else {
+        // Slow down — trim the trail so it doesn't linger after slowing
+        if (duck._trail.length > 0) { duck._trail.shift(); }
+      }
+    } else if (duck.onGround) {
+      // Clear trail immediately on ground contact
+      duck._trail = [];
+    }
   }
 
   // --- Animation state machine ---
   _duckAnimUpdate(duck, dt);
+}
+
+// Emit a single rising orange-red spark from the duck during charge.
+// Delegates to Juice.chargeSpark which spawns a tiny upward particle.
+function _emitChargeSpark(duck) {
+  Juice.chargeSpark(duck.x, duck.y, duck.power);
 }
 
 function _duckLaunch(duck) {
@@ -167,6 +223,19 @@ function _duckLaunch(duck) {
 
   // Juice: rubber duck squeak SFX on every jump
   SFX.squeak();
+
+  // Juice: directional kick-off puff + subtle shake
+  // The launch direction in canvas-space: vx, vy computed above.
+  // launchBurst expects the launch angle; it emits particles in the OPPOSITE direction.
+  // aimAngle is degrees above horizontal, and facing may flip x.
+  // In canvas coords: launch dir angle = atan2(duck.vy, duck.vx)
+  var launchAngle = Math.atan2(duck.vy, duck.vx);
+  Juice.launchBurst(duck.x, duck.y, launchAngle);
+  Juice.shake(JUICE_SHAKE_LAUNCH_MAG, JUICE_SHAKE_LAUNCH_DUR);
+
+  // Clear trail on launch so old positions don't show briefly
+  duck._trail = [];
+  duck._sparkTimer = 0;
 }
 
 function _duckLand(duck) {
@@ -344,12 +413,83 @@ function _duckDrawHurt(ctx, duck) {
   }
 }
 
+// Draw the charge glow ring — a pulsing warm halo around the duck while charging.
+// power: 0..1; totalTime: running time for pulse animation.
+function _drawChargeGlow(ctx, duck) {
+  var p   = duck.power;
+  var r   = duck.radius;
+
+  // Glow ring radius: base + power-scaled pulse
+  var glowR = r + DUCK_CHARGE_GLOW_BASE + p * DUCK_CHARGE_GLOW_PULSE;
+
+  // Color: lerp warm-orange (#ff8800) to hot-red (#ff1100) by power
+  var cr = 255;
+  var cg = Math.round(136 * (1 - p * 0.87));   // 136 → ~18
+  var cb = 0;
+
+  // Outer glow (large, very transparent)
+  ctx.save();
+  ctx.globalAlpha = 0.12 + p * 0.14;
+  ctx.fillStyle   = "rgb(" + cr + "," + cg + "," + cb + ")";
+  ctx.beginPath();
+  ctx.arc(duck.x, duck.y, glowR + 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Main ring (crisp, medium alpha)
+  ctx.save();
+  ctx.globalAlpha    = 0.35 + p * 0.40;
+  ctx.strokeStyle    = "rgb(" + cr + "," + cg + "," + cb + ")";
+  ctx.lineWidth      = 2.5 + p * 2.0;
+  ctx.shadowColor    = "rgb(" + cr + "," + cg + "," + cb + ")";
+  ctx.shadowBlur     = 8 + p * 12;
+  ctx.beginPath();
+  ctx.arc(duck.x, duck.y, glowR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Draw the motion trail — fading yellow ghost circles behind the duck.
+function _drawMotionTrail(ctx, duck) {
+  var trail = duck._trail;
+  if (!trail || trail.length === 0) return;
+
+  var r   = duck.radius;
+  var len = trail.length;
+
+  for (var i = 0; i < len; i++) {
+    // i=0 is oldest (tail), i=len-1 is newest (head, closest to duck)
+    var t   = i / (len - 1 || 1);  // 0=tail, 1=head
+    var a   = DUCK_TRAIL_ALPHA_TAIL + t * (DUCK_TRAIL_ALPHA_HEAD - DUCK_TRAIL_ALPHA_TAIL);
+    var pos = trail[i];
+
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle   = PAL.duckBody;  // match duck body colour (yellow)
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r * (0.55 + t * 0.35), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 // timeLeft is optional — when < 5 the duck's eyes widen to mirror clock urgency.
 function duckDraw(ctx, duck, timeLeft) {
   // Hurt state — delegate to the special pose drawer and exit
   if (duck.hurtTimer > 0 || duck.animState === "hurt") {
     _duckDrawHurt(ctx, duck);
     return;
+  }
+
+  // --- Motion trail (drawn BEFORE the duck body, behind it) ---
+  // Only when airborne and not hurt/charging
+  if (!duck.onGround && !duck.charging && duck._trail && duck._trail.length > 1) {
+    _drawMotionTrail(ctx, duck);
+  }
+
+  // --- Charge glow ring (drawn BEFORE body, around the duck) ---
+  if (duck.charging && duck.power > 0) {
+    _drawChargeGlow(ctx, duck);
   }
 
   // Soft contact shadow — drawn in world space before the body transform so it

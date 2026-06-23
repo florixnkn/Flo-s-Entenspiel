@@ -242,37 +242,94 @@ function _drawDoor(ctx, childProgress) {
 function drawLoseChildOverlay(ctx) {
   // SFX.cry() is triggered once in game.js when the state first enters LOSE_CHILD.
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  var bw = 460;
-  var bh = 220;
-  var bx = (CANVAS_W - bw) / 2;
-  var by = (CANVAS_H - bh) / 2;
+  if (imgReady(IMG.loseChild)) {
+    // --- Branch A: real photo background ---
+    drawImageCover(ctx, IMG.loseChild, 0, 0, CANVAS_W, CANVAS_H);
 
-  // Box
-  ctx.fillStyle = "#fff0f0";
-  rrPath(ctx, bx, by, bw, bh, 18);
-  ctx.fill();
-  ctx.strokeStyle = "#cc2222";
-  ctx.lineWidth   = 4;
-  rrPath(ctx, bx, by, bw, bh, 18);
-  ctx.stroke();
+    // Dark vignette so text stays readable against any photo
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Crying child figure (simple cartoon placeholder)
-  _drawCryingChild(ctx, bx + 54, by + bh / 2);
+    // Translucent text banner near bottom-center
+    var bw = 620;
+    var bh = 150;
+    var bx = (CANVAS_W - bw) / 2;
+    var by = CANVAS_H - 200;
 
-  // Text
-  ctx.fillStyle    = "#aa1111";
-  ctx.font         = "bold 32px system-ui, sans-serif";
-  ctx.textAlign    = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Das Kind weint 😭", CANVAS_W / 2 + 24, by + 70);
+    ctx.fillStyle   = "rgba(20,10,14,0.70)";
+    rrPath(ctx, bx, by, bw, bh, 14);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.lineWidth   = 2;
+    rrPath(ctx, bx, by, bw, bh, 14);
+    ctx.stroke();
 
-  ctx.fillStyle = "#444444";
-  ctx.font      = "17px system-ui, sans-serif";
-  ctx.fillText("R = nochmal", CANVAS_W / 2 + 24, by + 130);
+    // Headline
+    ctx.fillStyle    = "#ffdddd";
+    ctx.font         = "bold 30px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Zu langsam! 😭", CANVAS_W / 2, by + 38);
 
+    // Message — two lines
+    ctx.fillStyle = "#ffffff";
+    ctx.font      = "17px system-ui, sans-serif";
+    ctx.fillText("Du warst nicht schnell genug –", CANVAS_W / 2, by + 76);
+    ctx.fillText("jetzt muss das Kind ohne Ente baden.", CANVAS_W / 2, by + 98);
+
+    // Footer
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font      = "15px system-ui, sans-serif";
+    ctx.fillText("R = nochmal  ·  Esc = Menü", CANVAS_W / 2, by + 128);
+
+  } else {
+    // --- Branch B: fallback — cartoon card (no photo available yet) ---
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    var bw = 540;
+    var bh = 240;
+    var bx = (CANVAS_W - bw) / 2;
+    var by = (CANVAS_H - bh) / 2;
+
+    // Card background
+    ctx.fillStyle   = "#fff0f0";
+    rrPath(ctx, bx, by, bw, bh, 18);
+    ctx.fill();
+    ctx.strokeStyle = "#cc2222";
+    ctx.lineWidth   = 4;
+    rrPath(ctx, bx, by, bw, bh, 18);
+    ctx.stroke();
+
+    // Crying child figure on the left side of the card
+    _drawCryingChild(ctx, bx + 60, by + bh / 2);
+
+    // Text area is to the right of the child figure (child occupies ~120px from left)
+    // Center of the right text area:
+    var textCx = bx + 60 + (bw - 60) / 2;  // = bx + (bw + 60) / 2
+
+    // Headline
+    ctx.fillStyle    = "#aa1111";
+    ctx.font         = "bold 30px system-ui, sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Zu langsam! 😭", textCx, by + 68);
+
+    // Message — two lines at 17px so they stay within the card width
+    ctx.fillStyle = "#552222";
+    ctx.font      = "17px system-ui, sans-serif";
+    ctx.fillText("Du warst nicht schnell genug –", textCx, by + 112);
+    ctx.fillText("jetzt muss das Kind ohne Ente baden.", textCx, by + 136);
+
+    // Footer
+    ctx.fillStyle = "#666666";
+    ctx.font      = "15px system-ui, sans-serif";
+    ctx.fillText("R = nochmal  ·  Esc = Menü", textCx, by + 178);
+  }
+
+  ctx.textAlign    = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
 

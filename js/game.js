@@ -253,6 +253,9 @@
         // Save best time, then cache result for draw
         g.isNewBest  = bestTimeSave(g.allclearTime);
         g.bestTime   = bestTimeLoad();
+        // Celebratory confetti shower + green flash
+        Juice.confetti();
+        Juice.flash(JUICE_FLASH_CLEAR_COLOR, JUICE_FLASH_CLEAR_DUR);
         g._prevState = "ALLCLEAR";
       }
       if (Input.pressed("KeyR")) {
@@ -285,6 +288,8 @@
         // keine Fanfare mehr.
         Juice.splashBurst(g.tub.x + g.tub.w / 2, g.tub.y + g.tub.h / 2);
         Juice.shake(JUICE_SHAKE_SPLASH_MAG, JUICE_SHAKE_SPLASH_DUR);
+        // Brief white screen flash on tub entry — fades quickly (duration in JUICE constants)
+        Juice.flash(JUICE_FLASH_WIN_COLOR, JUICE_FLASH_WIN_DUR);
         g._prevState = "WIN_BEAT";
       }
       g.winBeatTimer -= dt;
@@ -403,6 +408,9 @@
       }
     }
 
+    // --- Ambient soap bubbles (background atmosphere, PLAY only) ---
+    Juice.ambientTick(dt);
+
     // --- Footstep crescendo (child approaching) ---
     Juice.updateFootstep(g.childProgress, dt);
 
@@ -458,6 +466,9 @@
     ctx.save();
     Juice.applyShake(ctx);
 
+    // Ambient soap bubbles — drawn first (behind everything) inside shake region
+    Juice.drawAmbient(ctx);
+
     drawPlatforms(ctx, g.platforms);
     drawTub(ctx, g.tub);
 
@@ -473,6 +484,10 @@
 
     ctx.restore();
     // --- End screenshake region ---
+
+    // Screen-space flash (outside shake so it covers the whole viewport cleanly)
+    // Drawn on top of the world but under the HUD/overlays.
+    Juice.drawFlash(ctx);
 
     // Level-intro banner (drawn outside shake, on top of everything)
     if (g.state === "LEVEL_INTRO") {

@@ -81,13 +81,24 @@ var SFX = (function () {
       _play(0.26, 0.04, 170, 0.01, 0.05, 0.18, 1, 1, 2.2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
     },
 
-    // Splash / Erfolg — Wasser-"Plätschern": ein Ploosh + zwei Tropfen-Plips.
+    // Splash / Erfolg — sanftes Wasser-Plätschern aus mehreren Tropfen,
+    // kein lautes Rausch-Geräusch mehr am Anfang.
     splash: function () {
-      // Haupt-Ploosh: rauschiger, abfallender Wasser-Aufprall
-      _play(0.34, 0.12, 360, 0.01, 0.05, 0.30, 4, 1.3, -1.1, 0, 0, 0, 0, 0.9, 0, 0, 0, 1, 0.08, 0);
-      // zwei Tropfen kurz danach für den Plätscher-Charakter
-      setTimeout(function () { _play(0.18, 0.08, 760, 0, 0.01, 0.11, 0, 1, -2.4, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0.10, 0); }, 80);
-      setTimeout(function () { _play(0.14, 0.08, 580, 0, 0.01, 0.11, 0, 1, -2.0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0.10, 0); }, 170);
+      var drops = [
+        [0,   0.20, 700, -2.2],
+        [60,  0.18, 620, -1.8],
+        [130, 0.19, 830, -2.5],
+        [205, 0.15, 560, -1.6],
+        [290, 0.13, 740, -2.0],
+        [375, 0.11, 660, -1.7]
+      ];
+      for (var i = 0; i < drops.length; i++) {
+        (function (d) {
+          setTimeout(function () {
+            _play(d[1], 0.08, d[2], 0, 0.01, 0.12, 0, 1, d[3], 0, 0, 0, 0, 0, 0, 0, 0, 1, 0.10, 0);
+          }, d[0]);
+        })(drops[i]);
+      }
     },
 
     // Toilet plop — warm low-pitched bubble + thud.
